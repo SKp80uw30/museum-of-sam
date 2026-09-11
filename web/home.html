@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#57d5d7">
+<meta name="description" content="Happy Birthday, Sam. A little museum. A universe of love.">
+<title>Happy Birthday, Sam — Museum of Sam</title>
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./home.css?v=6">
+</head>
+<body data-state="welcome">
+<div id="living-pan" tabindex="0" role="region" aria-label="Sam’s living coastal garden. On mobile, swipe left or right to explore the scenery."></div>
+<canvas id="world" aria-hidden="true"></canvas>
+<header class="masthead"><a class="brand" href="./home.html" aria-label="Museum of Sam, birthday home"><span class="brand-mark">S</span><span>MUSEUM OF SAM</span></a><span class="edition">TEAL SKIES & ALL THE LOVE</span></header>
+<main>
+<section id="welcome" class="panel welcome" aria-labelledby="birthday-title">
+<p class="eyebrow">YOUR PEOPLE. YOUR PLANET. YOUR LITTLE PARADISE.</p>
+<h1 id="birthday-title">Happy Birthday<br><em>Mum / Sam / Fiz / Samty</em></h1>
+<p class="message">We love you so much…</p>
+<button id="begin" class="primary">click here to see how much <span aria-hidden="true">↗</span></button>
+</section>
+<section id="journey" class="panel journey" hidden aria-label="A journey from home to the universe">
+<div class="journey-top"><span>LET’S SEE HOW FAR OUR LOVE GOES</span><button id="skip" class="text-button">Skip journey <span aria-hidden="true">↗</span></button></div>
+<div class="story-progress">
+  <div class="scale-caption"><p id="scale-number" class="eyebrow">OUR LOVE STARTS HERE</p><p class="story-refrain">We love you</p><h2 id="scale-name">more than this garden can hold…</h2><p id="scale-detail">So let’s go a little further.</p></div>
+  <div class="progress-track" aria-hidden="true"><span id="progress"></span></div>
+  <ol class="story-milestones" aria-label="How far our love goes">
+    <li aria-current="step"><span class="milestone-dot"></span>Home</li>
+    <li><span class="milestone-dot"></span>Australia</li>
+    <li><span class="milestone-dot"></span>Earth</li>
+    <li><span class="milestone-dot"></span>Solar system</li>
+    <li><span class="milestone-dot"></span>Milky Way</li>
+    <li><span class="milestone-dot"></span>Universe</li>
+  </ol>
+</div>
+</section>
+<section id="reveal" class="panel reveal" hidden aria-labelledby="love-title">
+<p class="eyebrow">SO, HOW MUCH DO WE LOVE YOU?</p>
+<h2 id="love-title" class="sr-only">This much!</h2>
+<div class="reveal-bottom"><p>More than all of that. And more every day.</p><button id="return" class="primary light">click here to start <span aria-hidden="true">↗</span></button></div>
+</section>
+<section id="portals" class="panel portals" hidden aria-labelledby="portal-title">
+<div class="portal-heading"><p class="eyebrow">WELCOME HOME, SAM</p><h2 id="portal-title">Four worlds. All for you.</h2><p>Your little paradise. Choose a doorway, or stay and play.</p></div>
+
+<button id="replay" class="text-button replay">Watch your birthday journey again ↗</button>
+</section>
+<nav class="portal-links" aria-label="Choose a museum experience">
+<a href="./index.html?scene=reef"><span class="portal-number">01</span><span class="portal-name">Underwater Reef</span><span class="portal-note">A world beneath the waves <b aria-hidden="true">↗</b></span></a>
+<a href="./index.html?scene=forest"><span class="portal-number">02</span><span class="portal-name">Forest Walkway</span><span class="portal-note">Follow the light <b aria-hidden="true">↗</b></span></a>
+<a href="./index.html?scene=jumping_castle"><span class="portal-number">03</span><span class="portal-name">Jumping Castle</span><span class="portal-note">Never too grown-up <b aria-hidden="true">↗</b></span></a>
+<a href="./index.html?scene=gallery_home"><span class="portal-number">04</span><span class="portal-name">Gallery Home</span><span class="portal-note">Make yourself at home <b aria-hidden="true">↗</b></span></a>
+</nav>
+<aside id="garden-tools" aria-label="Garden controls">
+  <button id="garden-discover" class="garden-pill" aria-expanded="false" aria-controls="garden-menu">✧ Little surprises</button>
+  <button id="garden-motion" class="garden-pill" aria-pressed="false">Pause garden</button>
+  <label class="garden-pill sound-choice"><input id="garden-sound" type="checkbox"> Sound</label>
+</aside>
+<div id="garden-menu" hidden><p>Little things Sam loves</p><div id="garden-actions"></div></div>
+<div id="garden-toast" role="status" aria-live="polite" hidden><span></span><button aria-label="Dismiss message">×</button></div>
+<div id="garden-pan-controls"><button aria-label="Explore garden to the left">←</button><button aria-label="Explore garden to the right">→</button></div>
+<p id="garden-hint">Birds to meet. Flowers to grow. Honey to cuddle.<span> ← Swipe the garden to explore → </span></p>
+</main>
+<footer id="footer"><span>A LITTLE MORE LOVE IN THE WORLD</span><span>WITH ALL OUR LOVE ♡</span></footer>
+<div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+<noscript><div class="no-script">Happy Birthday Mum / Sam / Fiz / Samty. We love you this much!<br><a href="./index.html?scene=reef">Underwater Reef</a> · <a href="./index.html?scene=forest">Forest Walkway</a> · <a href="./index.html?scene=jumping_castle">Jumping Castle</a> · <a href="./index.html?scene=gallery_home">Gallery Home</a><p>Enable JavaScript to enjoy your birthday journey and explore the museum.</p></div></noscript>
+<script type="module" src="./home.js?v=characters2"></script>
+</body>
+</html>

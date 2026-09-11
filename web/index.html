@@ -1,0 +1,2108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script id="birthday-entry-route">
+// Birthday entry only; explicit experience/review links retain their routes.
+if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(location.search).has('review')) {
+  location.replace('./home.html' + location.search + location.hash)
+}
+</script>
+<meta charset="utf-8" />
+<title>Museum of Sam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#05141c" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Museum of Sam" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<link rel="icon" href="./icons/icon-192.png" />
+<style>
+  html, body { margin: 0; height: 100%; background: #05141c; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  canvas { display: block; }
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(3, 15, 20, 0.72); color: #eafcff; text-align: center; cursor: pointer; z-index: 10;
+  }
+  #overlay h1 { font-size: 1.4rem; margin: 0 0 0.5rem; font-weight: 600; letter-spacing: 0.02em; }
+  #overlay p { margin: 0.25rem 0; opacity: 0.85; font-size: 0.95rem; }
+  #overlay .hint { margin-top: 1.25rem; font-size: 0.8rem; opacity: 0.6; }
+  #hud {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    color: #cdeff5; background: rgba(0,0,0,0.45); padding: 6px 14px; border-radius: 999px;
+    font-size: 0.72rem; letter-spacing: 0.02em; pointer-events: none; z-index: 5; opacity: 0;
+    transition: opacity 0.4s;
+  }
+  #hud.show { opacity: 1; }
+  #egg-hud {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    color: #fff2c9; background: rgba(0,0,0,0.45); padding: 6px 14px; border-radius: 999px;
+    font-size: 0.78rem; letter-spacing: 0.02em; pointer-events: none; z-index: 5; opacity: 0;
+    transition: opacity 0.4s;
+  }
+  #egg-hud.show { opacity: 1; }
+  #egg-toast {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%) translateY(-6px);
+    color: #fff8e6; background: rgba(20,14,0,0.78); padding: 8px 16px; border-radius: 10px;
+    font-size: 0.8rem; letter-spacing: 0.01em; pointer-events: none; z-index: 5; opacity: 0;
+    transition: opacity 0.3s, transform 0.3s; white-space: nowrap;
+  }
+  #egg-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    border-radius: 50%; background: rgba(255,255,255,0.7); z-index: 5; display: none;
+    transition: width 0.12s, height 0.12s, margin 0.12s, background 0.12s, box-shadow 0.12s;
+  }
+  #crosshair.hotspot {
+    width: 16px; height: 16px; margin: -8px 0 0 -8px; background: transparent;
+    border: 2px solid #ffe18c; box-shadow: 0 0 10px 2px rgba(255,225,140,0.75);
+    animation: crosshair-pulse 1s ease-in-out infinite;
+  }
+  @keyframes crosshair-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.22); opacity: 0.75; }
+  }
+  #hotspot-hint {
+    position: fixed; top: calc(50% + 20px); left: 50%; transform: translateX(-50%) translateY(-4px);
+    color: #ffe9b0; background: rgba(20,14,0,0.7); padding: 3px 11px; border-radius: 8px;
+    font-size: 0.72rem; letter-spacing: 0.01em; pointer-events: none; z-index: 5; opacity: 0;
+    transition: opacity 0.15s, transform 0.15s; white-space: nowrap;
+  }
+  #hotspot-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #05141c; color: #7fe3ff; font-size: 0.9rem; z-index: 20; flex-direction: column; gap: 12px;
+  }
+  .spinner { width: 28px; height: 28px; border: 3px solid rgba(127,227,255,0.25); border-top-color: #7fe3ff; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #credits-toggle {
+    position: fixed; bottom: 14px; right: 14px; z-index: 6;
+    color: #cdeff5; background: rgba(0,0,0,0.35); border: none; border-radius: 999px;
+    width: 26px; height: 26px; font-size: 0.85rem; cursor: pointer; opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+  #credits-toggle:hover { opacity: 1; }
+  #credits-panel {
+    position: fixed; bottom: 48px; right: 14px; z-index: 6; display: none;
+    background: rgba(0,0,0,0.72); color: #cdeff5; padding: 10px 14px; border-radius: 10px;
+    font-size: 0.7rem; line-height: 1.5; max-width: 260px;
+  }
+  #credits-panel.show { display: block; }
+  #credits-panel a { color: #7fe3ff; }
+  #scene-nav {
+    position: fixed; bottom: 14px; left: 14px; z-index: 11;
+    display: flex; gap: 6px; background: rgba(0,0,0,0.45); padding: 6px;
+    border-radius: 14px; backdrop-filter: blur(4px);
+  }
+  #scene-nav button {
+    all: unset; box-sizing: border-box; cursor: pointer; width: 46px; height: 46px;
+    border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+  #scene-nav button:hover { background: rgba(255,255,255,0.16); transform: translateY(-2px); }
+  #scene-nav button.active { background: rgba(127,227,255,0.22); border-color: #7fe3ff; }
+  #scene-nav button .icon { font-size: 1.15rem; line-height: 1; }
+  #scene-nav button .label {
+    font-size: 0.42rem; color: #cdeff5; letter-spacing: 0.02em; text-transform: uppercase;
+    opacity: 0.85; text-align: center; line-height: 1.1;
+  }
+  #mobile-controls {
+    position: fixed; bottom: 18px; right: 18px; z-index: 11;
+    display: none; flex-direction: column; gap: 10px;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+  }
+  #mobile-controls.show { display: flex; }
+  #mobile-controls .move-btn {
+    all: unset; box-sizing: border-box; width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(127,227,255,0.35);
+    color: #cdeff5; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  #mobile-controls .move-btn.active {
+    background: rgba(127,227,255,0.3); border-color: #7fe3ff;
+  }
+  #mobile-controls .jump-btn { border-color: rgba(255,225,140,0.5); display: none; }
+  #mobile-controls .jump-btn.active { background: rgba(255,225,140,0.3); border-color: #ffe18c; }
+  #mobile-controls.jumping-castle .jump-btn { display: flex; }
+  /* On touch devices the movement pad occupies bottom-right, so the credits
+     info toggle moves up top-right instead of overlapping it. */
+  body.is-touch #credits-toggle { top: 14px; right: 14px; bottom: auto; }
+  body.is-touch #credits-panel { top: 48px; right: 14px; bottom: auto; }
+</style>
+</head>
+<body>
+<a href="./home.html?home=portals" aria-label="Return to the birthday room and four portals" style="position:fixed;top:max(14px,env(safe-area-inset-top));left:14px;z-index:12;padding:9px 13px;border:1px solid #ffffff35;border-radius:24px;background:#08151bcc;color:#fff4df;font:12px Arial,sans-serif;text-decoration:none">⌂ Home</a>
+
+<div id="loading"><div class="spinner"></div><div id="loading-text">Loading hallway…</div></div>
+<div id="overlay" style="display:none">
+  <h1 id="overlay-title">Museum of Sam</h1>
+  <p id="overlay-cta">Click to walk in</p>
+  <p class="hint desktop-hint">WASD / arrows to move · mouse to look · Esc to release cursor · C to toggle collision mesh</p>
+  <p class="hint touch-hint" style="display:none">Tilt your phone to look around · use the arrows bottom-right to walk</p>
+  <p class="hint" id="nav-hint">Number keys 1–4 or the tiles bottom-left jump straight to any wing</p>
+</div>
+<div id="crosshair"></div>
+<div id="hotspot-hint"></div>
+<div id="hud"></div>
+<div id="egg-hud"></div>
+<div id="egg-toast"></div>
+<button id="credits-toggle" title="Asset credits">ⓘ</button>
+<div id="credits-panel"></div>
+<nav id="scene-nav"></nav>
+<div id="mobile-controls">
+  <button id="btn-jump" class="move-btn jump-btn" aria-label="Jump">🦘</button>
+  <button id="btn-forward" class="move-btn" aria-label="Move forward">▲</button>
+  <button id="btn-back" class="move-btn" aria-label="Move backward">▼</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { createForestSky } from './forest-sky.js?v=20260911-2'
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { CHARACTERS, birthdayName, HONEY_FILE } from './garden-characters.mjs?v=1'
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tunables — per-theme. Every 5 scenes shares this one loader (Phase 5/7);
+// picking a theme only swaps this THEME object, nothing else in the file.
+// ─────────────────────────────────────────────────────────────────────────
+const reviewParams = new URLSearchParams(location.search)
+const reviewMode = reviewParams.get('review') === '1'
+const SCENE_ORDER = ['reef', 'forest', 'jumping_castle', 'gallery_home']
+const sceneId = SCENE_ORDER.includes(reviewParams.get('scene')) ? reviewParams.get('scene') : 'reef'
+const EYE_HEIGHT = 1.6
+const MOVE_SPEED = 3.2          // units/sec
+const FALLBACK_GROUND_Y = 0
+const COLLISION_RADIUS = 0.35   // how close the player can get to a collider
+// Jumping — jumping_castle only (see tryJump()). Sized to feel like a real
+// hop on an inflatable floor, not a superhero leap: ~0.5m peak height, a
+// little forward drift while airborne, and a couple of decaying settle
+// bounces on landing rather than stopping dead.
+const JUMP_HEIGHT = 0.5           // meters, peak height above the floor
+const JUMP_GRAVITY = -20          // m/s^2, slightly stronger than real gravity for a snappy arc
+const JUMP_VELOCITY = Math.sqrt(2 * -JUMP_GRAVITY * JUMP_HEIGHT)
+const JUMP_FORWARD_BOOST = 1.5    // m/s of extra forward drift on takeoff, decays fast
+const JUMP_FORWARD_DECAY = 0.001  // per-second multiplier applied via Math.pow(., dt)
+const JUMP_BOUNCE_DAMPING = 0.4   // fraction of impact speed kept on each settle bounce
+const JUMP_MIN_BOUNCE_VELOCITY = 0.6  // below this, the bounce is considered settled
+const JUMP_REJUMP_THRESHOLD = 0.05    // must be back this close to the floor to jump again
+const PARTICLE_COUNT = 220
+const PARTICLE_FIELD_RADIUS = 12  // z-distance ahead/behind camera the drifting particulates span
+
+const THEMES = {
+  reef: {
+    title: 'Museum of Sam — Underwater Reef',
+    shortLabel: 'Underwater Reef',
+    navIcon: '🌊',
+    sceneUrl: '../exports/underwater_reef.glb?v=20260911-reef4',
+    // Bright, sunlit shallow-water look (see Museum-locations reference) —
+    // not a deep-ocean-at-night mood. Was 0x0a2530/0.045, which read as a
+    // near-black background with everything past a few meters swallowed by fog.
+    fogColor: 0x348f9f,
+    fogDensity: 0.023,       // low enough that the far end of the 60m corridor stays visible — "crystal clear water"
+    colliderPrefixes: [/^Post_/, /^Rock_/],
+    lightIntensities: { Sun: 3.2, Fill: 1.4, fallbackDivisor: 700 },
+    hemisphere: { sky: 0x9fdfff, ground: 0x8a6a3f, intensity: 0.5 },
+    gradeTint: 0x8fd6e8, gradeTintStrength: 0.12, gradeVignette: 0.28,
+    bloom: { strength: 0.25, radius: 0.5, threshold: 2.0 },
+    particleColor: 0xcdeff5, particleOpacity: 0.5,
+    shaftColor: 0xdff5ff, shaftOpacity: 0.07,
+    creditsLabel: 'Coral models (CC-BY):',
+    // CC-BY coral models from Sketchfab, dense-scattered along both walls
+    // (Phase 2 revision, see TODO.md) — attribution required by license.
+    credits: [
+      { title: 'Coral Reef 3 L', author: 'stefanorivera', url: 'https://sketchfab.com/3d-models/cb1f7998ca5f452cb8a29ed4162d7a32' },
+      { title: 'Coral reef', author: 'ilay-sh-r', url: 'https://sketchfab.com/3d-models/103b64ddab724c11a25ac1b80b6a073d' },
+      { title: 'Coral reef.1', author: 'Sefaros', url: 'https://sketchfab.com/3d-models/4641a13a0ffb42859f8b6d914951a5fd' },
+    ],
+  },
+  forest: {
+    title: 'Museum of Sam — Forest Walkway',
+    shortLabel: 'Forest Walkway',
+    navIcon: '🌲',
+    sceneUrl: '../exports/forest_walkway.glb?v=20260911-forest3',
+    // Dappled canopy-green mood (see Museum-locations forest reference) —
+    // a lighter, warmer haze than the reef's blue-teal water fog.
+    fogColor: 0xc2dbdd,
+    fogDensity: 0.013,       // canopy already darkens the far end; keep fog light so frames stay legible
+    colliderPrefixes: [],
+    walkBounds: { minX: -1.15, maxX: 1.15, minZ: -59.5, maxZ: 0 },
+    exposure: 1.35,
+    lightIntensities: { Sun: 3.6, Fill: 2.0, fallbackDivisor: 700 },
+    hemisphere: { sky: 0xcde7ff, ground: 0x77704e, intensity: 1.65 },
+    gradeTint: 0xe1e8c9, gradeTintStrength: 0.025, gradeVignette: 0.15,
+    bloom: { strength: 0.18, radius: 0.4, threshold: 2.0 },
+    particleColor: 0xf5e6b8, particleOpacity: 0.16,   // dust motes in the sunbeams rather than underwater silt
+    shaftColor: 0xfff2c9, shaftOpacity: 0.055,
+    creditsLabel: 'Nature assets (CC0, Poly Pizza):',
+    credits: [
+      { title: 'Fern', author: 'Quaternius', url: 'https://poly.pizza/m/jqcanvH7D6' },
+      { title: 'Grass', author: 'Quaternius', url: 'https://poly.pizza/m/iw6l7gqcdQ' },
+      { title: 'Vines', author: 'Quaternius', url: 'https://poly.pizza/m/EVS4viM9BL' },
+      { title: 'Pothos Vine Large', author: 'Isa Lousberg', url: 'https://poly.pizza/m/HG1d091bLo' },
+    ],
+  },
+  jumping_castle: {
+    title: 'Museum of Sam — Jumping Castle',
+    shortLabel: 'Jumping Castle',
+    navIcon: '🎪',
+    sceneUrl: '../exports/jumping_castle.glb?v=20260911-jc4',
+    // Giant inflatable yellow/green vinyl tunnel (see Museum-locations art
+    // gallery reference — despite the source filename, it's actually a
+    // bounce-castle tunnel repurposed as an exhibit space) — warm gold
+    // haze from the glossy ribbed walls, not the cool blue/green mood of
+    // the other two themes.
+    fogColor: 0xc7b99a,
+    fogDensity: 0.006,
+    colliderPrefixes: [],
+    exposure: 1.05,
+    walkBounds: { minX: -1.30, maxX: 1.30, minZ: -59.8, maxZ: 0 },
+    lightIntensities: { Sun: 1.3, Fill: 0.6, fallbackDivisor: 700 },
+    hemisphere: { sky: 0xfff6e1, ground: 0x4c5744, intensity: 0.3 },
+    gradeTint: 0xf5d98a, gradeTintStrength: 0.025, gradeVignette: 0.14,
+    bloom: { strength: 0.22, radius: 0.4, threshold: 2.0 },
+    particleColor: 0xffe8a8, particleOpacity: 0.0,
+    shaftColor: 0xffdf9c, shaftOpacity: 0.0,
+    creditsLabel: 'All-procedural scene — no external model assets.',
+    credits: [],
+  },
+  gallery_home: {
+    title: 'Museum of Sam — Gallery Home',
+    shortLabel: 'Gallery Home',
+    navIcon: '🏛️',
+    sceneUrl: '../exports/gallery_home.glb?v=20260911-gh1',
+    // Expensive designer-house hallway (see Museum-locations "beautiful
+    // large hallway in an expensive designer house" reference) — clean,
+    // bright, warm-neutral interior lit mostly by its own baked-in
+    // emissive fixtures (cove strips, recessed downlights, sconces, a
+    // hanging pendant), not the moody colored-haze mood of the other 3.
+    fogColor: 0xf2e9da,
+    fogDensity: 0.008,
+    colliderPrefixes: [],   // furniture/wall panels sit close to the mounts, same "no collision yet" precedent as forest/jumping_castle
+    exposure: 1.25,
+    lightIntensities: { Sun: 3.2, Fill: 2.0, fallbackDivisor: 700 },
+    // three.js has no real light bounce, so the ceiling underside (which
+    // gets no direct light — the cove/downlight fixtures are baked-emissive
+    // meshes that glow themselves but don't illuminate neighbors) reads
+    // far darker here than in the Cycles preview render, which does bounce
+    // light. HemisphereLight is the cheap fake-GI stand-in already used for
+    // the reef/forest shadow-fill problem — pushed harder here since this
+    // scene has no other ambient source doing that job.
+    hemisphere: { sky: 0xf5ecd9, ground: 0xe8d9bd, intensity: 2.6 },
+    gradeTint: 0xfff2d9, gradeTintStrength: 0.04, gradeVignette: 0.15,
+    bloom: { strength: 0.16, radius: 0.35, threshold: 2.5 },
+    particleColor: 0xfff2d9, particleOpacity: 0.08,
+    shaftColor: 0xfff2d9, shaftOpacity: 0.02,
+    creditsLabel: 'Floor/wall textures (CC0, PolyHaven):',
+    credits: [
+      { title: 'Interior Tiles', author: 'PolyHaven', url: 'https://polyhaven.com/a/interior_tiles' },
+      { title: 'Granite Tile 03', author: 'PolyHaven', url: 'https://polyhaven.com/a/granite_tile_03' },
+      { title: 'Beige Wall 002', author: 'PolyHaven', url: 'https://polyhaven.com/a/beige_wall_002' },
+      { title: 'Dirty Carpet', author: 'PolyHaven', url: 'https://polyhaven.com/a/dirty_carpet' },
+    ],
+  },
+}
+const THEME = THEMES[sceneId]
+const SCENE_URL = THEME.sceneUrl
+const FOG_COLOR = THEME.fogColor
+const FOG_DENSITY = THEME.fogDensity
+
+// Real artwork is swapped into every Canvas_* mesh (see the glTF export) at
+// runtime from a shared pool of photos — see tools/prepare_artwork.py, which
+// converts photos-from-chaz/ into web/artwork/chaz/*.jpg plus this manifest.
+// Every wing draws its own random, non-repeating subset of the pool on each
+// page load (no theme owns specific photos), and frames keep quietly
+// reshuffling to a fresh, unused photo every so often while you walk — so
+// no two logins, and no two long visits, look quite the same.
+const ARTWORK_BASE = './artwork/chaz/'
+const ARTWORK_MANIFEST_URL = './artwork/chaz-manifest.json'
+const ARTWORK_ROTATE_MIN_MS = 45000
+const ARTWORK_ROTATE_MAX_MS = 100000
+const ARTWORK_FADE_SECONDS = 0.9
+const artworkManifestPromise = fetch(ARTWORK_MANIFEST_URL)
+  .then((r) => (r.ok ? r.json() : []))
+  .catch(() => [])
+
+// ─────────────────────────────────────────────────────────────────────────
+
+const loadingEl = document.getElementById('loading')
+const overlayEl = document.getElementById('overlay')
+const crosshairEl = document.getElementById('crosshair')
+const hotspotHintEl = document.getElementById('hotspot-hint')
+const hudEl = document.getElementById('hud')
+
+document.title = THEME.title
+document.getElementById('overlay-title').textContent = THEME.title
+
+// ── Scene nav — bottom-left tiles, always on top, jump to any wing without
+// walking back to a start point first. Number keys 1–4 mirror the tiles so
+// the same jump works even while Pointer Lock has the cursor hidden (a
+// locked page can't hit-test a click against an arbitrary DOM element, but
+// keydown still fires normally).
+function goToScene(id) {
+  if (id === sceneId) return
+  if (document.pointerLockElement) document.exitPointerLock()
+  const url = new URL(location.href)
+  url.searchParams.set('scene', id)
+  location.href = `${url.pathname}${url.search}`
+}
+const sceneNavEl = document.getElementById('scene-nav')
+SCENE_ORDER.forEach((id, i) => {
+  const t = THEMES[id]
+  const btn = document.createElement('button')
+  btn.className = id === sceneId ? 'active' : ''
+  btn.title = `${t.shortLabel} (${i + 1})`
+  btn.innerHTML = `<span class="icon">${t.navIcon}</span><span class="label">${t.shortLabel.split(' ')[0]}</span>`
+  btn.addEventListener('click', (e) => { e.stopPropagation(); goToScene(id) })
+  sceneNavEl.appendChild(btn)
+})
+sceneNavEl.addEventListener('click', (e) => e.stopPropagation())
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return
+  const n = Number(e.key)
+  if (n >= 1 && n <= SCENE_ORDER.length) goToScene(SCENE_ORDER[n - 1])
+})
+
+const creditsToggleEl = document.getElementById('credits-toggle')
+const creditsPanelEl = document.getElementById('credits-panel')
+creditsPanelEl.innerHTML = `<strong>${THEME.creditsLabel}</strong><br>` + THEME.credits.map(
+  (c) => `${c.title} — <a href="${c.url}" target="_blank" rel="noopener">${c.author}</a>`
+).join('<br>')
+creditsToggleEl.addEventListener('click', () => creditsPanelEl.classList.toggle('show'))
+
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.setClearColor(FOG_COLOR)
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = THEME.exposure ?? 1.3
+renderer.outputColorSpace = THREE.SRGBColorSpace
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFShadowMap
+document.body.appendChild(renderer.domElement)
+
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(FOG_COLOR)
+const forestSky = sceneId === 'forest' ? createForestSky(scene) : null
+if (sceneId === 'jumping_castle') {
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  const room = new RoomEnvironment()
+  scene.environment = pmrem.fromScene(room, 0.06).texture
+  scene.environmentIntensity = 0.22
+  room.dispose()
+  pmrem.dispose()
+}
+// Per-fragment depth fog — cheap, standard technique for underwater haze.
+// Not the same mechanism as Blender's world Volume Scatter (see CLAUDE.md),
+// which renders fully black in EEVEE Next; this is a three.js render-side
+// effect applied after export, deferred here to Phase 6 as planned.
+scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY)
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 200)
+camera.rotation.order = 'YXZ'
+
+// ── Post-processing: bloom + underwater color grading/vignette ──────────
+const UnderwaterGradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    tint: { value: new THREE.Color(THEME.gradeTint) },
+    tintStrength: { value: THEME.gradeTintStrength },
+    vignetteStrength: { value: THEME.gradeVignette },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform vec3 tint;
+    uniform float tintStrength;
+    uniform float vignetteStrength;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      color.rgb = mix(color.rgb, color.rgb * tint, tintStrength);
+      float dist = distance(vUv, vec2(0.5));
+      float vig = smoothstep(0.35, 0.85, dist);
+      color.rgb *= 1.0 - vig * vignetteStrength;
+      gl_FragColor = color;
+    }
+  `,
+}
+
+const composer = new EffectComposer(renderer)
+composer.addPass(new RenderPass(scene, camera))
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  THEME.bloom.strength,  // subtle glow on bright highlights, not a full blowout
+  THEME.bloom.radius,
+  // UnrealBloomPass thresholds against pre-tonemap HDR luminance, not the
+  // final 0–1 LDR image — with the bright pale-sand + real coral assets
+  // from the reef quality pass, a "0.78" threshold caught almost the whole
+  // frame and washed everything into a pervasive white haze. 2.0 restricts
+  // bloom to genuine highlights (the light shafts) again.
+  THEME.bloom.threshold,
+)
+composer.addPass(bloomPass)
+composer.addPass(new ShaderPass(UnderwaterGradeShader))
+composer.addPass(new OutputPass())
+
+// ── Floating particulates ────────────────────────────────────────────────
+function makeSoftDiscTexture() {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  grad.addColorStop(0, 'rgba(255,255,255,0.9)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, size, size)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+const particleGeo = new THREE.BufferGeometry()
+const particlePositions = new Float32Array(PARTICLE_COUNT * 3)
+const particleSpeeds = new Float32Array(PARTICLE_COUNT)
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particlePositions[i * 3 + 0] = (Math.random() - 0.5) * 5.5
+  particlePositions[i * 3 + 1] = Math.random() * 2.8 + 0.1
+  particlePositions[i * 3 + 2] = (Math.random() - 0.5) * PARTICLE_FIELD_RADIUS * 2
+  particleSpeeds[i] = 0.06 + Math.random() * 0.1
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3))
+const particleMat = new THREE.PointsMaterial({
+  size: 0.045,
+  map: makeSoftDiscTexture(),
+  transparent: true,
+  opacity: THEME.particleOpacity,
+  depthWrite: false,
+  color: THEME.particleColor,
+  sizeAttenuation: true,
+})
+const particles = new THREE.Points(particleGeo, particleMat)
+scene.add(particles)
+
+// ── Light shafts ──────────────────────────────────────────────────────────
+function makeShaftTexture() {
+  const w = 64, h = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  const grad = ctx.createLinearGradient(0, 0, 0, h)
+  grad.addColorStop(0, 'rgba(255,255,255,0.55)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, w, h)
+  // destination-in only reads the mask's alpha channel, not its RGB — the
+  // stops below must vary alpha (0 at the edges, 1 at the center) or the
+  // taper has no effect and the shaft renders as a hard-edged slab.
+  const horiz = ctx.createLinearGradient(0, 0, w, 0)
+  horiz.addColorStop(0, 'rgba(255,255,255,0)')
+  horiz.addColorStop(0.5, 'rgba(255,255,255,1)')
+  horiz.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.fillStyle = horiz
+  ctx.fillRect(0, 0, w, h)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+const shaftTexture = makeShaftTexture()
+const shaftGroup = new THREE.Group()
+const SHAFT_SPACING = 14
+const SHAFT_COUNT = 5
+for (let i = 0; i < SHAFT_COUNT; i++) {
+  const shaftMat = new THREE.MeshBasicMaterial({
+    map: shaftTexture,
+    transparent: true,
+    opacity: THEME.shaftOpacity,
+    color: THEME.shaftColor,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    fog: false, // fog-mixing an additive material shifts it toward the fog's grey-teal instead of staying a clean glow
+  })
+  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 9), shaftMat)
+  shaft.position.set((Math.random() - 0.5) * 3.5, 4.0, -i * SHAFT_SPACING - 4)
+  shaft.rotation.x = -0.15
+  shaft.rotation.y = Math.random() * Math.PI
+  shaftGroup.add(shaft)
+}
+scene.add(shaftGroup)
+
+// ── Easter eggs ───────────────────────────────────────────────────────────
+// Shared framework (Phase 8, TODO.md): a small registry of "hotspots" —
+// either real scene objects or cheap new procedural props — each wired to
+// a trigger (click / walk-near / jump-on) and one of 5 reusable effect
+// primitives (squish-pulse, color-cycle, particle-burst, hinge-open,
+// spawn-animate-despawn). Per-scene discovery is scored 0/15 and persisted
+// to localStorage; nothing beyond that is persisted (fine if it resets —
+// see TODO.md Phase 8).
+const eggHudEl = document.getElementById('egg-hud')
+const eggToastEl = document.getElementById('egg-toast')
+const EGG_STORAGE_KEY = `museum-eggs-${sceneId}`
+let foundEggs = new Set()
+try { foundEggs = new Set(JSON.parse(localStorage.getItem(EGG_STORAGE_KEY) || '[]')) } catch { foundEggs = new Set() }
+const hotspots = []
+let eggsTotal = 0
+const eggAnimations = []
+
+function addEggAnimation(updateFn) { eggAnimations.push(updateFn) }
+function updateEggAnimations(dt) {
+  for (let i = eggAnimations.length - 1; i >= 0; i--) {
+    if (!eggAnimations[i](dt)) eggAnimations.splice(i, 1)
+  }
+}
+function delayedCall(delay, fn) {
+  let t = 0
+  addEggAnimation((dt) => { t += dt; if (t >= delay) { fn(); return false } return true })
+}
+
+function registerHotspot(def) {
+  hotspots.push({ radius: 1.8, cooldown: 1.6, maxDistance: 4.5, aimAngle: 0.12, lastTriggered: -999, ...def })
+  eggsTotal++
+}
+
+function updateEggHud() {
+  eggHudEl.textContent = `🥚 ${foundEggs.size}/${eggsTotal}`
+  eggHudEl.classList.add('show')
+}
+let eggToastTimer = null
+function showEggToast(label, alreadyFound = false) {
+  eggToastEl.textContent = alreadyFound
+    ? `👀 ${label} — already located`
+    : `✨ Found: ${label} (${foundEggs.size}/${eggsTotal})`
+  eggToastEl.classList.add('show')
+  clearTimeout(eggToastTimer)
+  eggToastTimer = setTimeout(() => eggToastEl.classList.remove('show'), 2600)
+}
+// One consistent "you found something" signal on top of whatever the
+// individual egg's own effect does — a small multi-colored confetti puff
+// right in front of the player, so every discovery (regardless of world or
+// effect type) reads unmistakably as "you found an egg" the same way.
+function spawnConfettiCelebration() {
+  const forward = new THREE.Vector3(); camera.getWorldDirection(forward)
+  const origin = camera.position.clone().add(forward.multiplyScalar(1.0)).add(new THREE.Vector3(0, 0.15, 0))
+  const confettiColors = [0xff5e5e, 0xffd75e, 0x5ee6ff, 0x8fff6e, 0xff8fd0, 0xb08fff]
+  confettiColors.forEach((color, i) => delayedCall(i * 0.025, () => particleBurst(origin.clone(), {
+    color, count: 7, spread: 0.45, speed: 1.5, gravity: -1.6, duration: 1.1, size: 0.045,
+  })))
+}
+function markFound(id, label) {
+  if (foundEggs.has(id)) { showEggToast(label, true); return }
+  foundEggs.add(id)
+  try { localStorage.setItem(EGG_STORAGE_KEY, JSON.stringify([...foundEggs])) } catch {}
+  updateEggHud()
+  showEggToast(label)
+  spawnConfettiCelebration()
+}
+
+// Click hotspots use an "aim cone" test (angle from camera-forward, within
+// range) rather than exact mesh raycasting — far more forgiving for small/
+// thin decorative props and skinned fish than a triangle-precise raycast.
+// Shared by the actual click dispatch (respects cooldown, so a just-fired
+// egg doesn't re-trigger while its own effect is still playing) and the
+// per-frame hover hint below (ignores cooldown — the object is still an
+// egg worth calling out even mid-cooldown).
+function findAimedClickHotspot(respectCooldown) {
+  const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir)
+  const now = performance.now() / 1000
+  let best = null, bestAngle = Infinity
+  for (const h of hotspots) {
+    if (h.trigger !== 'click') continue
+    if (respectCooldown && now - h.lastTriggered < h.cooldown) continue
+    const pos = h.getWorldPos(); if (!pos) continue
+    const toTarget = pos.clone().sub(camera.position)
+    const dist = toTarget.length()
+    if (dist > h.maxDistance) continue
+    toTarget.normalize()
+    const angle = camDir.angleTo(toTarget)
+    if (angle > h.aimAngle) continue
+    if (angle < bestAngle) { bestAngle = angle; best = h }
+  }
+  return best
+}
+function tryClickHotspot() {
+  if (!hallwayReady) return
+  const best = findAimedClickHotspot(true)
+  if (best) {
+    best.lastTriggered = performance.now() / 1000
+    best.run(best)
+    markFound(best.id, best.name)
+  }
+}
+// Per-frame "is the crosshair currently over an egg" indicator — a lit,
+// pulsing crosshair plus a name hint, so aiming around visibly tells you
+// something's interactive before you commit to a click (walk/jump-trigger
+// eggs have no equivalent since those fire automatically by proximity).
+let hoveredHotspot = null
+function updateHotspotHoverHint() {
+  if (!hallwayReady || !(controls.isLocked || mobileActive)) {
+    if (hoveredHotspot) { hoveredHotspot = null; crosshairEl.classList.remove('hotspot'); hotspotHintEl.classList.remove('show') }
+    return
+  }
+  const best = findAimedClickHotspot(false)
+  if (best === hoveredHotspot) return
+  hoveredHotspot = best
+  if (best) {
+    crosshairEl.classList.add('hotspot')
+    hotspotHintEl.textContent = foundEggs.has(best.id) ? `👀 ${best.name} (found)` : `🥚 Click to open`
+    hotspotHintEl.classList.add('show')
+  } else {
+    crosshairEl.classList.remove('hotspot')
+    hotspotHintEl.classList.remove('show')
+  }
+}
+function updateProximityHotspots() {
+  if (!hallwayReady) return
+  const now = performance.now() / 1000
+  for (const h of hotspots) {
+    if (h.trigger !== 'walk') continue
+    if (now - h.lastTriggered < h.cooldown) continue
+    const pos = h.getWorldPos(); if (!pos) continue
+    const dx = camera.position.x - pos.x, dz = camera.position.z - pos.z
+    if (dx * dx + dz * dz < h.radius * h.radius) {
+      h.lastTriggered = now
+      h.run(h)
+      markFound(h.id, h.name)
+    }
+  }
+}
+// Fired from the jump-landing physics in tick() — inert for every scene
+// except jumping_castle, which is the only one that ever sets `jumping`.
+function onJumpLanding() {
+  if (!hallwayReady) return
+  const now = performance.now() / 1000
+  for (const h of hotspots) {
+    if (h.trigger !== 'jump') continue
+    if (now - h.lastTriggered < h.cooldown) continue
+    const pos = h.getWorldPos(); if (!pos) continue
+    const dx = camera.position.x - pos.x, dz = camera.position.z - pos.z
+    if (dx * dx + dz * dz < h.radius * h.radius) {
+      h.lastTriggered = now
+      h.run(h)
+      markFound(h.id, h.name)
+    }
+  }
+}
+
+// ── Effect primitive 1: squish-pulse — scale up/down on a spring-ish tween.
+function squishPulse(mesh, opts = {}) {
+  const { peak = 1.35, duration = 0.5 } = opts
+  const baseScale = mesh.userData.__eggBaseScale || mesh.scale.clone()
+  mesh.userData.__eggBaseScale = baseScale
+  let elapsed = 0
+  addEggAnimation((dt) => {
+    elapsed += dt
+    const t = elapsed / duration
+    if (t >= 1) { mesh.scale.copy(baseScale); return false }
+    const s = 1 + Math.sin(Math.min(1, t) * Math.PI) * (peak - 1)
+    mesh.scale.set(baseScale.x * s, baseScale.y * s, baseScale.z * s)
+    return true
+  })
+}
+
+// ── Effect primitive: particle-burst — one-shot spawned sprite burst.
+function particleBurst(position, opts = {}) {
+  const {
+    color = 0xffffff, count = 20, spread = 0.5, speed = 1.0, size = 0.05,
+    duration = 1.2, gravity = -0.4,
+  } = opts
+  const positions = new Float32Array(count * 3)
+  const velocities = []
+  for (let i = 0; i < count; i++) {
+    positions[i * 3 + 0] = position.x + (Math.random() - 0.5) * spread
+    positions[i * 3 + 1] = position.y + (Math.random() - 0.5) * spread
+    positions[i * 3 + 2] = position.z + (Math.random() - 0.5) * spread
+    const theta = Math.random() * Math.PI * 2
+    const phi = Math.random() * Math.PI
+    velocities.push(new THREE.Vector3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.abs(Math.cos(phi)) + 0.3,
+      Math.sin(phi) * Math.sin(theta),
+    ).multiplyScalar(speed * (0.4 + Math.random() * 0.6)))
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  const mat = new THREE.PointsMaterial({
+    size, map: burstSpriteTexture, transparent: true, depthWrite: false,
+    color, sizeAttenuation: true, opacity: 1,
+  })
+  const points = new THREE.Points(geo, mat)
+  scene.add(points)
+  let elapsed = 0
+  addEggAnimation((dt) => {
+    elapsed += dt
+    const arr = geo.attributes.position.array
+    for (let i = 0; i < count; i++) {
+      velocities[i].y += gravity * dt
+      arr[i * 3 + 0] += velocities[i].x * dt
+      arr[i * 3 + 1] += velocities[i].y * dt
+      arr[i * 3 + 2] += velocities[i].z * dt
+    }
+    geo.attributes.position.needsUpdate = true
+    mat.opacity = Math.max(0, 1 - elapsed / duration)
+    if (elapsed >= duration) {
+      scene.remove(points)
+      geo.dispose(); mat.dispose()
+      return false
+    }
+    return true
+  })
+}
+const burstSpriteTexture = makeSoftDiscTexture() // reuses the particulates' soft-disc texture generator, defined above
+
+// ── Easter-egg-hunt system (2026-09-11 redesign) ─────────────────────────
+// Every hotspot is now a literal, obviously-clickable chocolate-egg prop
+// (not a disguised real scene object) at the same location the earlier
+// per-egg-effect design used. Opening one always does the same three
+// things — lid pops open, a character from the birthday cast climbs out
+// with a "<Name> found!" label, and (via markFound(), unchanged) a
+// confetti burst + toast confirm the find — so discovery reads the same
+// way everywhere, and the "find" is a specific character, not an
+// arbitrary effect. Locations/triggers/ids are unchanged from the
+// original per-world design (see the world sections below); only what a
+// hotspot looks like and does on trigger changed.
+
+// Reuses the same birthday-cast data the homepage's living garden
+// (living-home.js/garden-people.js) draws from, so the roster matches
+// exactly — 16 people + Honey the dog. The garden has no exported bird
+// list (they're inlined in living-home.js), so the 5 species are
+// restated here with the same names/colors.
+function pickAccessory(d) {
+  if (d.hat) return { type: 'hat', color: 0x223e43 }
+  if (d.crown) return { type: 'crown' }
+  if (d.hood) return { type: 'hood', color: d.pants || 0xb8d6d5 }
+  if (d.sunglasses) return { type: 'glasses', color: d.sunglasses }
+  if (d.glasses || d.topGlasses) return { type: 'glasses', color: 0x282d41 }
+  if (d.beard || d.moustache) return { type: 'beard', color: d.hair }
+  if (d.bow) return { type: 'bow', color: 0x162e3f }
+  if (d.lei) return { type: 'lei' }
+  if (d.necklace) return { type: 'necklace' }
+  if (d.flower) return { type: 'flower', color: d.flower }
+  return null
+}
+const POPUP_CHARACTERS = [
+  ...CHARACTERS.map((d) => ({ kind: 'person', name: birthdayName(d.file), hair: d.hair, shirt: d.shirt, accessory: pickAccessory(d) })),
+  { kind: 'dog', name: birthdayName(HONEY_FILE) },
+  { kind: 'bird', name: 'Cockatoo', body: 0xfffde6, wing: 0xf2ead0, crest: true },
+  { kind: 'bird', name: 'Rainbow Lorikeet', body: 0x3d82ef, wing: 0x17b981 },
+  { kind: 'bird', name: 'Kookaburra', body: 0xf7dfb4, wing: 0x805b40 },
+  { kind: 'bird', name: 'Kingfisher', body: 0x16bfe0, wing: 0x087eaa },
+  { kind: 'bird', name: 'Seagull', body: 0xf7ffff, wing: 0x9ebec6 },
+] // 22 characters total — 60 eggs cycle through this with a per-world offset
+
+function buildBird(bodyColor = 0x3a2f28, wingColor = 0x5a4a3a, crest = false) {
+  const group = new THREE.Group()
+  const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 })
+  const wingMat = new THREE.MeshStandardMaterial({ color: wingColor, roughness: 0.7, side: THREE.DoubleSide })
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), bodyMat)
+  body.scale.set(1.3, 0.9, 1)
+  group.add(body)
+  const wings = []
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.04), wingMat)
+    wing.position.set(side * 0.05, 0, 0)
+    wing.rotation.y = side * 0.3
+    group.add(wing)
+    wings.push(wing)
+  }
+  if (crest) {
+    const crestMat = new THREE.MeshStandardMaterial({ color: 0xffe568 })
+    for (let i = 0; i < 3; i++) {
+      const c = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), crestMat)
+      c.position.set((i - 1) * 0.012, 0.075 + i * 0.01, -0.01)
+      group.add(c)
+    }
+  }
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.045, 6), new THREE.MeshStandardMaterial({ color: 0xffc766 }))
+  beak.rotation.x = Math.PI / 2
+  beak.position.set(0, 0.02, 0.065)
+  group.add(beak)
+  group.userData.wings = wings
+  return group
+}
+function buildDogFigure() {
+  const group = new THREE.Group()
+  const furMat = new THREE.MeshStandardMaterial({ color: 0xe7b775, roughness: 0.8 })
+  const earMat = new THREE.MeshStandardMaterial({ color: 0xad753f, roughness: 0.8 })
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), furMat)
+  body.scale.set(1, 0.85, 1.3)
+  body.position.y = 0.13
+  group.add(body)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), furMat)
+  head.position.set(0, 0.24, 0.14)
+  group.add(head)
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), earMat)
+    ear.scale.set(0.7, 1.7, 0.5)
+    ear.position.set(s * 0.075, 0.24, 0.1)
+    group.add(ear)
+  }
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0xfff0d6 }))
+  snout.position.set(0, 0.2, 0.21)
+  group.add(snout)
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), new THREE.MeshStandardMaterial({ color: 0x342b2e }))
+  nose.position.set(0, 0.2, 0.245)
+  group.add(nose)
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), furMat)
+  tail.scale.set(0.6, 0.6, 1.6)
+  tail.position.set(0, 0.18, -0.19)
+  group.add(tail)
+  group.userData.tail = tail
+  return group
+}
+// A simplified "toy figure" stand-in for the full detailed rig the
+// homepage garden uses — same hair/shirt colors and one representative
+// accessory so it's recognizably the same character, but cheap enough to
+// build fresh on every egg-open without hurting frame rate.
+function buildPersonFigure(c) {
+  const group = new THREE.Group()
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xeac49f, roughness: 0.6 })
+  const shirtMat = new THREE.MeshStandardMaterial({ color: c.shirt, roughness: 0.6 })
+  const hairMat = new THREE.MeshStandardMaterial({ color: c.hair, roughness: 0.75 })
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 0.2, 10), shirtMat)
+  body.position.y = 0.13
+  group.add(body)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), skinMat)
+  head.position.y = 0.3
+  group.add(head)
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.088, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), hairMat)
+  hairCap.position.y = 0.318
+  group.add(hairCap)
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 5), new THREE.MeshStandardMaterial({ color: 0x1c2b33 }))
+    eye.position.set(s * 0.03, 0.305, 0.078)
+    group.add(eye)
+  }
+  const acc = c.accessory
+  if (acc?.type === 'hat') {
+    const hatMat = new THREE.MeshStandardMaterial({ color: acc.color })
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.015, 10), hatMat)
+    brim.position.y = 0.365
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.07, 10), hatMat)
+    crown.position.y = 0.41
+    group.add(brim, crown)
+  } else if (acc?.type === 'crown') {
+    const gemColors = [0x40b9eb, 0xff68ad, 0xffe34f, 0x9669d3, 0xff857c]
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2
+      const gem = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 5), new THREE.MeshStandardMaterial({ color: gemColors[i] }))
+      gem.position.set(Math.cos(a) * 0.075, 0.375, Math.sin(a) * 0.075)
+      group.add(gem)
+    }
+  } else if (acc?.type === 'hood') {
+    const hood = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 6, 12, Math.PI), new THREE.MeshStandardMaterial({ color: acc.color }))
+    hood.position.set(0, 0.22, -0.01)
+    hood.rotation.x = Math.PI / 2
+    group.add(hood)
+  } else if (acc?.type === 'glasses') {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.012, 0.012), new THREE.MeshStandardMaterial({ color: acc.color }))
+    bar.position.set(0, 0.3, 0.08)
+    group.add(bar)
+  } else if (acc?.type === 'beard') {
+    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshStandardMaterial({ color: acc.color }))
+    beard.position.set(0, 0.255, 0.055)
+    beard.scale.set(1, 0.8, 0.8)
+    group.add(beard)
+  } else if (acc?.type === 'bow') {
+    const bow = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.028, 0.014), new THREE.MeshStandardMaterial({ color: acc.color }))
+    bow.position.set(0, 0.225, 0.08)
+    group.add(bow)
+  } else if (acc?.type === 'lei' || acc?.type === 'necklace') {
+    const petalColors = acc.type === 'lei' ? [0xed6eaf, 0xffe160, 0xa7dd6e, 0x71cde8] : [0x54c7e2]
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2
+      const petal = new THREE.Mesh(new THREE.SphereGeometry(0.013, 6, 5), new THREE.MeshStandardMaterial({ color: petalColors[i % petalColors.length] }))
+      petal.position.set(Math.cos(a) * 0.085, 0.19 - Math.sin(a) * 0.015, Math.sin(a) * 0.03 + 0.06)
+      group.add(petal)
+    }
+  } else if (acc?.type === 'flower') {
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshStandardMaterial({ color: acc.color }))
+    flower.position.set(-0.075, 0.335, 0.04)
+    group.add(flower)
+  }
+  return group
+}
+function buildFigureFor(character) {
+  if (character.kind === 'dog') return buildDogFigure()
+  if (character.kind === 'bird') return buildBird(character.body, character.wing, character.crest)
+  return buildPersonFigure(character)
+}
+
+// A floating "<Name> found!" label, canvas-texture sprite (same technique
+// as the garden's textSign(), simplified).
+function makeEggLabelSprite(text) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 320; canvas.height = 80
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'rgba(20,14,0,0.78)'
+  ctx.beginPath(); ctx.roundRect(2, 2, 316, 76, 20); ctx.fill()
+  ctx.fillStyle = '#fff8e6'
+  ctx.font = '700 30px Arial'
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+  ctx.fillText(text, 160, 40)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }))
+  const baseScale = [0.5, 0.125]
+  sprite.scale.set(...baseScale, 1)
+  sprite.userData.baseScale = baseScale
+  return sprite
+}
+
+// A literal two-piece chocolate-egg shell — an upper and lower dome split
+// at the equator (the group's local origin), with a ring of polka-dot
+// decoration for variety between eggs. `radius`/`scaleY` are exposed via
+// userData so openEasterEgg() can compute the lid-lift/label offsets.
+const EGG_RADIUS = 0.16
+const EGG_SCALE_Y = 1.3
+const EGG_REST_Y = EGG_RADIUS * EGG_SCALE_Y // vertical offset so the shell's bottom tip sits on the ground
+const EGG_COLOR_PAIRS = [
+  [0xff8fa8, 0xfff3d9], [0x8fd9ff, 0xfff8c9], [0xb08fff, 0xd9fff0],
+  [0xffd75e, 0xff8fd0], [0x8fff9c, 0xfff0b0], [0xffb26b, 0x9ce8ff],
+  [0xff6f61, 0xffe9a0], [0x6fe6c8, 0xffd1e8],
+]
+function buildEasterEgg(colorTop, colorBottom) {
+  const group = new THREE.Group()
+  const matTop = new THREE.MeshStandardMaterial({ color: colorTop, roughness: 0.3, metalness: 0.1 })
+  const matBottom = new THREE.MeshStandardMaterial({ color: colorBottom, roughness: 0.3, metalness: 0.1 })
+  const top = new THREE.Mesh(new THREE.SphereGeometry(EGG_RADIUS, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), matTop)
+  top.scale.y = EGG_SCALE_Y
+  group.add(top)
+  const bottom = new THREE.Mesh(new THREE.SphereGeometry(EGG_RADIUS, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), matBottom)
+  bottom.scale.y = EGG_SCALE_Y
+  group.add(bottom)
+  const dotMat = new THREE.MeshStandardMaterial({ color: colorBottom, roughness: 0.4 })
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(EGG_RADIUS * 0.11, 6, 5), dotMat)
+    dot.position.set(Math.cos(a) * EGG_RADIUS * 0.97, 0, Math.sin(a) * EGG_RADIUS * 0.97)
+    group.add(dot)
+  }
+  group.userData = { top, bottom }
+  return group
+}
+
+// The one shared "open the egg" reveal — lid pops up and tips aside, the
+// character grows up out of the shell with a name label, holds a couple
+// seconds, then both retract so the egg is ready to be reopened. The
+// confetti + toast are handled by markFound() (called right after run()
+// by the dispatcher), not here, so they fire exactly once per new find.
+function openEasterEgg(eggGroup, character) {
+  const { top } = eggGroup.userData
+  squishPulse(eggGroup, { peak: 1.08, duration: 0.22 })
+  const figure = buildFigureFor(character)
+  figure.scale.setScalar(0.001)
+  eggGroup.add(figure)
+  const label = makeEggLabelSprite(`${character.name} found!`)
+  const labelBaseScale = label.userData.baseScale
+  label.scale.set(0.001, 0.001, 1)
+  label.position.set(0, EGG_REST_Y * 2.2, 0)
+  eggGroup.add(label)
+
+  let elapsed = 0
+  const liftDuration = 0.35, popDuration = 0.35, holdDuration = 2.4, closeDuration = 0.4
+  const revealHold = liftDuration + popDuration + holdDuration
+  const total = revealHold + closeDuration
+
+  addEggAnimation((dt) => {
+    elapsed += dt
+    const liftT = elapsed < liftDuration ? elapsed / liftDuration
+      : elapsed < revealHold ? 1
+      : Math.max(0, 1 - (elapsed - revealHold) / closeDuration)
+    top.position.set(liftT * EGG_RADIUS * 0.7, liftT * EGG_REST_Y * 1.15, 0)
+    top.rotation.z = liftT * 0.6
+
+    let figScale = 0
+    if (elapsed > liftDuration) {
+      const t = elapsed - liftDuration
+      if (t < popDuration) figScale = t / popDuration
+      else if (elapsed < revealHold) figScale = 1
+      else figScale = Math.max(0, 1 - (elapsed - revealHold) / closeDuration)
+    }
+    figScale = Math.max(0.001, figScale)
+    figure.scale.setScalar(figScale)
+    figure.position.y = Math.sin(elapsed * 3) * 0.015
+    figure.rotation.y = elapsed * 1.0
+    label.scale.set(labelBaseScale[0] * figScale, labelBaseScale[1] * figScale, 1)
+
+    if (elapsed >= total) {
+      top.position.set(0, 0, 0); top.rotation.z = 0
+      eggGroup.remove(figure); eggGroup.remove(label)
+      return false
+    }
+    return true
+  })
+}
+
+// Builds one egg prop at `position` — `characterIndex` selects both the
+// character (mod 22) and the shell's color pair (mod 8) so neighboring
+// eggs don't repeat the same colors.
+function buildEggAt(position, characterIndex) {
+  const character = POPUP_CHARACTERS[characterIndex % POPUP_CHARACTERS.length]
+  const colors = EGG_COLOR_PAIRS[characterIndex % EGG_COLOR_PAIRS.length]
+  const egg = buildEasterEgg(colors[0], colors[1])
+  egg.position.copy(position)
+  scene.add(egg)
+  return { egg, character }
+}
+// Builds an egg and registers its hotspot in one call — the common case.
+// A few castle eggs need custom trigger logic (counting jumps) and call
+// buildEggAt() directly instead, wiring their own registerHotspot().
+function placeEasterEgg(id, trigger, position, characterIndex, triggerOpts = {}) {
+  const { egg, character } = buildEggAt(position, characterIndex)
+  registerHotspot({
+    id, name: character.name, trigger, getWorldPos: () => egg.position,
+    ...triggerOpts,
+    run: () => openEasterEgg(egg, character),
+  })
+  return egg
+}
+
+// ── Reef hotspot registration (World 1, TODO.md Phase 8) ────────────────
+// Real-object eggs target scene nodes by prefix + index, discovered at load
+// time (robust to exact counts differing slightly from build-time notes).
+function pick(list, index) { return list && list.length ? list[index % list.length] : null }
+
+function initReefEggs(hallway) {
+  const byPrefix = {}
+  hallway.traverse((obj) => {
+    for (const p of ['Rock_Medium_', 'Post_left_', 'Post_right_', 'CoralDense_left_', 'CoralDense_right_', 'Reef_Branch_Colony_', 'Reef_Outboard_Cluster_', 'Seaweed', 'Clownfish', 'YellowTang', 'Butterflyfish']) {
+      if (obj.name.startsWith(p)) (byPrefix[p] ??= []).push(obj)
+    }
+  })
+  const worldPos = (obj) => { const v = new THREE.Vector3(); obj.getWorldPosition(v); return v }
+  const O = 0 // this world's slice of the 22-character roster
+  let i = 0
+
+  const geodeRock = pick(byPrefix['Rock_Medium_'], 2)
+  if (geodeRock) placeEasterEgg('reef-geode-rock', 'click', worldPos(geodeRock), O + i++)
+
+  const bloomCoral = pick(byPrefix['CoralDense_left_'], 1)
+  if (bloomCoral) placeEasterEgg('reef-blooming-coral', 'click', worldPos(bloomCoral), O + i++)
+
+  const showoffFish = pick(byPrefix['Clownfish'], 0)
+  if (showoffFish) placeEasterEgg('reef-showoff-fish', 'click', worldPos(showoffFish), O + i++)
+
+  const bubblePost = pick(byPrefix['Post_left_'], 3)
+  if (bubblePost) placeEasterEgg('reef-bubble-post', 'click', worldPos(bubblePost), O + i++)
+
+  const seaweedAnchor = pick(byPrefix['Seaweed'], 4)
+  if (seaweedAnchor) placeEasterEgg('reef-seaweed-wave', 'walk', worldPos(seaweedAnchor), O + i++, { radius: 2.2, cooldown: 6 })
+
+  placeEasterEgg('reef-buried-chest', 'click', new THREE.Vector3(1.6, groundHeightAt(1.6, -14) + EGG_REST_Y, -14), O + i++)
+
+  const pufferFish = pick(byPrefix['YellowTang'], 0) || pick(byPrefix['Clownfish'], 3)
+  if (pufferFish) placeEasterEgg('reef-puffer-alarm', 'click', worldPos(pufferFish), O + i++)
+
+  const shaft = shaftGroup.children[2]
+  if (shaft) placeEasterEgg('reef-sunbeam-coins', 'click', worldPos(shaft), O + i++)
+
+  const followerFish = pick(byPrefix['Clownfish'], 6)
+  if (followerFish) placeEasterEgg('reef-curious-follower', 'walk', worldPos(followerFish), O + i++, { radius: 2.5, cooldown: 8 })
+
+  placeEasterEgg('reef-sand-puff', 'walk', new THREE.Vector3(-1.8, groundHeightAt(-1.8, -22) + EGG_REST_Y, -22), O + i++, { radius: 1.6, cooldown: 5 })
+
+  placeEasterEgg('reef-oyster-pearl', 'click', new THREE.Vector3(-1.4, groundHeightAt(-1.4, -27) + EGG_REST_Y, -27), O + i++)
+
+  const moodCoral = pick(byPrefix['Reef_Branch_Colony_'], 2)
+  if (moodCoral) placeEasterEgg('reef-mood-coral', 'click', worldPos(moodCoral), O + i++)
+
+  const anchorRock = pick(byPrefix['Rock_Medium_'], 5)
+  const crabPos = anchorRock ? worldPos(anchorRock).add(new THREE.Vector3(0.25, 0, 0.2)) : new THREE.Vector3(1.2, 0, -33)
+  crabPos.y = groundHeightAt(crabPos.x, crabPos.z) + EGG_REST_Y
+  placeEasterEgg('reef-hidden-crab', 'walk', crabPos, O + i++, { radius: 1.5, cooldown: 6 })
+
+  placeEasterEgg('reef-message-bottle', 'click', new THREE.Vector3(2.0, groundHeightAt(2.0, -40) + EGG_REST_Y, -40), O + i++)
+
+  placeEasterEgg('reef-drifting-jellyfish', 'click', new THREE.Vector3(0.6, 2.6, -50), O + i++, { maxDistance: 6 })
+
+  updateEggHud()
+}
+
+// ── Forest hotspot registration (World 2, TODO.md Phase 8) ──────────────
+// Real node names confirmed by direct-parsing exports/forest_walkway.glb
+// (same 12-byte-header + JSON-chunk technique as World 1). Individual
+// Fern_1_*/Fern_-1_* instances are merged into InstancedMesh batches by
+// instanceForestFerns() before this runs (see the loader below), so
+// "Startled Fern" targets a fixed corridor position instead of a real
+// per-instance node — same precedent as reef's Sand Puff egg.
+function initForestEggs(hallway) {
+  const byPrefix = {}
+  hallway.traverse((obj) => {
+    for (const p of ['Trunk_', 'PathLight_', 'WallPatch_left_', 'WallPatch_right_', 'Forest_Canopy_Leaves_', 'Frame_left_', 'Frame_right_']) {
+      if (obj.name.startsWith(p)) (byPrefix[p] ??= []).push(obj)
+    }
+  })
+  const worldPos = (obj) => { const v = new THREE.Vector3(); obj.getWorldPosition(v); return v }
+  const ivyStems = hallway.getObjectByName('Forest_Ivy_Stems')
+  const wallIvy = hallway.getObjectByName('Forest_Wall_Ivy')
+  const O = 6
+  let i = 0
+
+  const wavingCanopy = pick(byPrefix['Forest_Canopy_Leaves_'], 1)
+  if (wavingCanopy) placeEasterEgg('forest-waving-branch', 'click', worldPos(wavingCanopy), O + i++)
+
+  const squirrelTrunk = pick(byPrefix['Trunk_'], 2)
+  const squirrelPos = squirrelTrunk ? worldPos(squirrelTrunk).add(new THREE.Vector3(0.18, 0, 0.1)) : new THREE.Vector3(0.9, 0, -8)
+  squirrelPos.y = groundHeightAt(squirrelPos.x, squirrelPos.z) + EGG_REST_Y
+  placeEasterEgg('forest-shy-squirrel', 'walk', squirrelPos, O + i++, { radius: 1.8, cooldown: 7 })
+
+  const fireflyLight = pick(byPrefix['PathLight_'], 3)
+  if (fireflyLight) placeEasterEgg('forest-firefly-gathering', 'click', worldPos(fireflyLight), O + i++)
+
+  const birdPos = ivyStems ? worldPos(ivyStems) : new THREE.Vector3(-1.0, 1.6, -16)
+  placeEasterEgg('forest-startled-bird', 'click', birdPos, O + i++, { maxDistance: 6 })
+
+  const secretPatch = pick(byPrefix['WallPatch_left_'], 4)
+  if (secretPatch) placeEasterEgg('forest-secret-portrait', 'click', worldPos(secretPatch), O + i++)
+
+  const lanternLight = pick(byPrefix['PathLight_'], 9)
+  if (lanternLight) placeEasterEgg('forest-magic-lantern', 'click', worldPos(lanternLight), O + i++)
+
+  placeEasterEgg('forest-startled-fern', 'walk', new THREE.Vector3(-0.95, groundHeightAt(-0.95, -24) + EGG_REST_Y, -24), O + i++, { radius: 1.7, cooldown: 6 })
+
+  const pothosBase = wallIvy ? worldPos(wallIvy) : new THREE.Vector3(1.0, 0.4, -31)
+  placeEasterEgg('forest-climbing-pothos', 'click', pothosBase, O + i++, { maxDistance: 5 })
+
+  const mushroomTrunk = pick(byPrefix['Trunk_'], 7)
+  const mushroomPos = mushroomTrunk ? worldPos(mushroomTrunk).add(new THREE.Vector3(-0.2, 0, 0.15)) : new THREE.Vector3(-0.8, 0, -38)
+  mushroomPos.y = groundHeightAt(mushroomPos.x, mushroomPos.z) + EGG_REST_Y
+  placeEasterEgg('forest-mushroom-ring', 'click', mushroomPos, O + i++)
+
+  const confettiCanopy = pick(byPrefix['Forest_Canopy_Leaves_'], 4)
+  if (confettiCanopy) placeEasterEgg('forest-leaf-confetti', 'click', worldPos(confettiCanopy), O + i++)
+
+  const woodpeckerTrunk = pick(byPrefix['Trunk_'], 11)
+  if (woodpeckerTrunk) placeEasterEgg('forest-woodpecker-trunk', 'walk', worldPos(woodpeckerTrunk), O + i++, { radius: 1.9, cooldown: 6 })
+
+  placeEasterEgg('forest-sunbeam-wink', 'click', new THREE.Vector3(0.2, 14, -30), O + i++, { maxDistance: 45, aimAngle: 0.35 })
+
+  const butterflyPatch = pick(byPrefix['WallPatch_right_'], 6)
+  const butterflyPos = butterflyPatch ? worldPos(butterflyPatch).add(new THREE.Vector3(0, 0.15, 0.05)) : new THREE.Vector3(0.9, 1.5, -44)
+  placeEasterEgg('forest-wandering-butterfly', 'click', butterflyPos, O + i++)
+
+  placeEasterEgg('forest-creaky-plank', 'walk', new THREE.Vector3(0, groundHeightAt(0, -50) + EGG_REST_Y, -50), O + i++, { radius: 1.4, cooldown: 5 })
+
+  placeEasterEgg('forest-web-watcher', 'click', new THREE.Vector3(-1.0, 1.3, -55), O + i++, { maxDistance: 5 })
+
+  updateEggHud()
+}
+
+// ── Jumping Castle hotspot registration (World 3, TODO.md Phase 8) ──────
+// Real node names confirmed by direct-parsing exports/jumping_castle.glb.
+// The TODO.md's aspirational "Rib_*"/"InteriorRidge_*"/"WallPanel_*" names
+// don't exist in the actual export — the corridor's inflatable-wall
+// geometry is all `WallChamber_L_*`/`WallChamber_R_*` (150 total), so every
+// wall-surface egg below targets those instead. "Applause Lights" (3x same
+// spot) and "Ceiling Confetti Cannon" (5x any spot) are counting eggs: they
+// exploit that the dispatcher only fires when getWorldPos() returns a point
+// within radius of the current landing — returning a deliberately far-away
+// sentinel until the count threshold is reached means getWorldPos's side
+// effect (incrementing the counter) runs every landing without the effect
+// itself firing early.
+function initCastleEggs(hallway) {
+  const byPrefix = {}
+  hallway.traverse((obj) => {
+    for (const p of ['CeilingBulb_', 'CeilingBeam_', 'EdgeBolster_', 'WallChamber_L_', 'WallChamber_R_', 'Frame_left_', 'Frame_right_']) {
+      if (obj.name.startsWith(p)) (byPrefix[p] ??= []).push(obj)
+    }
+  })
+  const worldPos = (obj) => { const v = new THREE.Vector3(); obj.getWorldPosition(v); return v }
+  const O = 12
+  let i = 0
+
+  // Super Bounce Ridge keeps its real-physics side effect (next jump goes
+  // ~2x high) alongside the standard egg-open reveal, so it needs its own
+  // run() rather than the plain placeEasterEgg() helper.
+  const bounceChamber = pick(byPrefix['WallChamber_L_'], 20)
+  if (bounceChamber) {
+    const { egg, character } = buildEggAt(worldPos(bounceChamber), O + i++)
+    registerHotspot({
+      id: 'castle-super-bounce-ridge', name: character.name, trigger: 'jump', radius: 2.4,
+      getWorldPos: () => egg.position,
+      run: () => { bounceBoostMultiplier = Math.SQRT2; openEasterEgg(egg, character) },
+    })
+  }
+
+  const boingBolster = pick(byPrefix['EdgeBolster_'], 0)
+  if (boingBolster) placeEasterEgg('castle-boing-bolster', 'jump', worldPos(boingBolster), O + i++, { radius: 2.6 })
+
+  const discoBulb = pick(byPrefix['CeilingBulb_'], 0)
+  if (discoBulb) placeEasterEgg('castle-disco-bulb', 'click', worldPos(discoBulb), O + i++)
+
+  const puffyChamber = pick(byPrefix['WallChamber_L_'], 35)
+  if (puffyChamber) placeEasterEgg('castle-puffy-panel', 'click', worldPos(puffyChamber), O + i++)
+
+  const confettiChamber = pick(byPrefix['WallChamber_R_'], 35)
+  if (confettiChamber) placeEasterEgg('castle-confetti-rib', 'click', worldPos(confettiChamber), O + i++)
+
+  placeEasterEgg('castle-bouncing-bunny', 'jump', new THREE.Vector3(0, groundHeightAt(0, -18) + EGG_REST_Y, -18), O + i++, { radius: 2.5 })
+
+  const jellyFrame = pick(byPrefix['Frame_left_'], 5)
+  if (jellyFrame) placeEasterEgg('castle-jelly-frame', 'click', worldPos(jellyFrame), O + i++)
+
+  // Applause Lights: jump-on the SAME spot 3x. The dispatcher only fires
+  // when getWorldPos() lands within radius of the current landing spot, so
+  // returning a far-away sentinel until the count threshold is reached lets
+  // getWorldPos's side effect (incrementing applauseCount) run on every
+  // landing near this spot without the reveal firing early.
+  {
+    const applausePos = new THREE.Vector3(0, groundHeightAt(0, -30) + EGG_REST_Y, -30)
+    const { egg, character } = buildEggAt(applausePos, O + i++)
+    let applauseCount = 0
+    registerHotspot({
+      id: 'castle-applause-lights', name: character.name, trigger: 'jump', radius: 2.4, cooldown: 0.4,
+      getWorldPos: () => {
+        const dx = camera.position.x - applausePos.x, dz = camera.position.z - applausePos.z
+        if (dx * dx + dz * dz < 2.4 * 2.4) applauseCount++
+        return applauseCount >= 3 ? egg.position : new THREE.Vector3(9999, 9999, 9999)
+      },
+      run: () => openEasterEgg(egg, character),
+    })
+  }
+
+  const squeakyBolster = pick(byPrefix['EdgeBolster_'], 1)
+  if (squeakyBolster) placeEasterEgg('castle-squeaky-bolster', 'click', worldPos(squeakyBolster), O + i++)
+
+  const sleepyBeam = pick(byPrefix['CeilingBeam_'], 4)
+  if (sleepyBeam) placeEasterEgg('castle-sleepy-beam', 'walk', worldPos(sleepyBeam), O + i++, { radius: 2.2, cooldown: 6 })
+
+  const dominoAnchor = pick(byPrefix['WallChamber_L_'], 50)
+  if (dominoAnchor) placeEasterEgg('castle-domino-ribs', 'jump', worldPos(dominoAnchor), O + i++, { radius: 2.4 })
+
+  const blushChamber = pick(byPrefix['WallChamber_R_'], 55)
+  if (blushChamber) placeEasterEgg('castle-blushing-panel', 'click', worldPos(blushChamber), O + i++)
+
+  // Ceiling Confetti Cannon: same far-sentinel counting trick as Applause
+  // Lights, but "any spot" — radius is irrelevant since the sentinel only
+  // resolves to a real position (egg.position) once the 5th jump lands.
+  {
+    const cannonPos = new THREE.Vector3(0, groundHeightAt(0, -40) + EGG_REST_Y, -40)
+    const { egg, character } = buildEggAt(cannonPos, O + i++)
+    let totalJumpCount = 0
+    registerHotspot({
+      id: 'castle-confetti-cannon', name: character.name, trigger: 'jump', radius: 3,
+      getWorldPos: () => {
+        totalJumpCount++
+        return totalJumpCount >= 5 ? egg.position : new THREE.Vector3(9999, 9999, 9999)
+      },
+      run: () => openEasterEgg(egg, character),
+    })
+  }
+
+  const popBulb = pick(byPrefix['CeilingBulb_'], 7)
+  if (popBulb) placeEasterEgg('castle-almost-pop-bulb', 'click', worldPos(popBulb), O + i++)
+
+  placeEasterEgg('castle-glowing-footprints', 'walk', new THREE.Vector3(0, groundHeightAt(0, -45) + EGG_REST_Y, -45), O + i++, { radius: 2.0, cooldown: 8 })
+
+  updateEggHud()
+}
+
+// ── Gallery Home hotspot registration (World 4, TODO.md Phase 8) ────────
+// Real node names confirmed by direct-parsing exports/gallery_home.glb.
+function initGalleryEggs(hallway) {
+  const byPrefix = {}
+  hallway.traverse((obj) => {
+    for (const p of ['Sconce_', 'LampShade_', 'PendantCage_', 'PlantPot_', 'Downlight_', 'WallPanel_left_', 'WallPanel_right_', 'ConsoleTop_', 'Frame_left_', 'Frame_right_']) {
+      if (obj.name.startsWith(p)) (byPrefix[p] ??= []).push(obj)
+    }
+  })
+  const worldPos = (obj) => { const v = new THREE.Vector3(); obj.getWorldPosition(v); return v }
+  const byIndex = (list, idx) => (byPrefix[list] || []).find((o) => o.name.endsWith('_' + idx)) || pick(byPrefix[list], Number(idx))
+  const coveLeft = hallway.getObjectByName('CoveLight_left')
+  const rug = hallway.getObjectByName('Rug_Runner')
+  const farDoorGlow = hallway.getObjectByName('FarDoorGlow')
+  const border = hallway.getObjectByName('Border_0')
+  const O = 18
+  let i = 0
+
+  const candleSconce = pick(byPrefix['Sconce_'], 2)
+  if (candleSconce) placeEasterEgg('gallery-candlelight-wink', 'click', worldPos(candleSconce), O + i++)
+
+  const moodLamp = pick(byPrefix['LampShade_'], 1)
+  if (moodLamp) placeEasterEgg('gallery-mood-lamp', 'click', worldPos(moodLamp), O + i++)
+
+  const pendant = pick(byPrefix['PendantCage_'], 0)
+  if (pendant) placeEasterEgg('gallery-breezy-pendant', 'click', worldPos(pendant), O + i++)
+
+  const sheddingPot = byIndex('PlantPot_', '02')
+  if (sheddingPot) placeEasterEgg('gallery-shedding-plant', 'click', worldPos(sheddingPot), O + i++)
+
+  if (rug) placeEasterEgg('gallery-rippling-rug', 'walk', worldPos(rug), O + i++, { radius: 1.6, cooldown: 6 })
+
+  const hiddenPanel = pick(byPrefix['WallPanel_left_'], 6)
+  if (hiddenPanel) placeEasterEgg('gallery-hidden-portrait', 'click', worldPos(hiddenPanel), O + i++)
+
+  if (farDoorGlow) placeEasterEgg('gallery-doorway-glow', 'click', worldPos(farDoorGlow), O + i++, { maxDistance: 30, aimAngle: 0.25 })
+
+  const welcomeConsole = byIndex('ConsoleTop_', '02')
+  if (welcomeConsole) placeEasterEgg('gallery-welcoming-lamp', 'walk', worldPos(welcomeConsole), O + i++, { radius: 2.2, cooldown: 8 })
+
+  const spotDownlight = pick(byPrefix['Downlight_'], 10)
+  if (spotDownlight) placeEasterEgg('gallery-museum-spotlight', 'click', worldPos(spotDownlight), O + i++)
+
+  if (border) placeEasterEgg('gallery-golden-vein', 'click', worldPos(border), O + i++)
+
+  if (coveLeft) placeEasterEgg('gallery-ceiling-breath', 'click', worldPos(coveLeft), O + i++)
+
+  const songbirdPot = pick(byPrefix['PlantPot_'], 4)
+  const songbirdPos = songbirdPot ? worldPos(songbirdPot).add(new THREE.Vector3(0.08, 0.3, 0.05)) : new THREE.Vector3(-0.9, 1.0, -20)
+  if (songbirdPot) placeEasterEgg('gallery-startled-songbird', 'walk', songbirdPos, O + i++, { radius: 1.8, cooldown: 8 })
+
+  const fairySconce = pick(byPrefix['Sconce_'], 9)
+  if (fairySconce) placeEasterEgg('gallery-fairy-dust-sconce', 'click', worldPos(fairySconce), O + i++)
+
+  const livingFrame = pick(byPrefix['Frame_left_'], 9)
+  if (livingFrame) placeEasterEgg('gallery-living-portrait', 'click', worldPos(livingFrame), O + i++)
+
+  const chimeConsole = byIndex('ConsoleTop_', '06')
+  if (chimeConsole) placeEasterEgg('gallery-house-chime', 'walk', worldPos(chimeConsole), O + i++, { radius: 2.0, cooldown: 8 })
+
+  updateEggHud()
+}
+
+// ── Load the hallway ────────────────────────────────────────────────────
+let colliderMeshes = []
+let colliderBounds = []
+let floorMesh = null
+let hallwayReady = false
+let mixer = null
+let reefSun = null
+const sunDirection = new THREE.Vector3()
+const surfaceTextures = []
+const forestWindTime = { value: 0 }
+const forestWindMaterials = new Map()
+let forestWindDepth = null
+// Imported fern copies share geometry/materials. Batch in 10m bands for
+// fewer draw calls while retaining useful distance/frustum culling.
+function instanceForestFerns(root) {
+  root.updateMatrixWorld(true)
+  const inverseRoot = root.matrixWorld.clone().invert()
+  const groups = new Map()
+  root.traverse(obj => {
+    if (!obj.isMesh || !/^Fern_1_/.test(obj.name) || Array.isArray(obj.material)) return
+    const band = Math.floor(new THREE.Vector3().setFromMatrixPosition(obj.matrixWorld).z / 10)
+    const key = `${obj.geometry.uuid}:${obj.material.uuid}:${band}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(obj)
+  })
+  for (const originals of groups.values()) {
+    const first = originals[0]
+    const batch = new THREE.InstancedMesh(first.geometry, first.material, originals.length)
+    batch.name = 'Forest_Instanced_Ferns'
+    batch.castShadow = first.castShadow
+    batch.receiveShadow = first.receiveShadow
+    originals.forEach((obj, index) => batch.setMatrixAt(index, new THREE.Matrix4().multiplyMatrices(inverseRoot, obj.matrixWorld)))
+    batch.instanceMatrix.needsUpdate = true
+    batch.computeBoundingSphere()
+    root.add(batch)
+    for (const obj of originals) obj.removeFromParent()
+  }
+}
+
+function addForestWind(shader) {
+  shader.uniforms.forestWindTime = forestWindTime
+  shader.vertexShader = 'uniform float forestWindTime;\n' + shader.vertexShader
+  shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
+    #include <begin_vertex>
+    vec3 forestWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+    float forestSway = sin(forestWorld.x * 0.7 + forestWorld.z * 0.45 + forestWindTime * 0.85)
+      + 0.35 * sin(forestWorld.z * 1.7 - forestWindTime * 1.2);
+    transformed.x += forestSway * 0.035 * smoothstep(2.8, 5.5, forestWorld.y);
+  `)
+}
+function enableForestWind(obj) {
+  const windMaterial = (material) => {
+    if (!forestWindMaterials.has(material)) {
+      const clone = material.clone()
+      clone.onBeforeCompile = addForestWind
+      clone.customProgramCacheKey = () => 'forest-leaf-wind-v1'
+      forestWindMaterials.set(material, clone)
+    }
+    return forestWindMaterials.get(material)
+  }
+  obj.material = Array.isArray(obj.material) ? obj.material.map(windMaterial) : windMaterial(obj.material)
+  if (!forestWindDepth) {
+    forestWindDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, side: THREE.DoubleSide })
+    forestWindDepth.onBeforeCompile = addForestWind
+    forestWindDepth.customProgramCacheKey = () => 'forest-leaf-wind-depth-v1'
+  }
+  obj.customDepthMaterial = forestWindDepth
+}
+const reviewFrameTimes = []
+let reviewLastFrame = 0
+
+const gltfLoader = new GLTFLoader()
+gltfLoader.load(
+  SCENE_URL,
+  (gltf) => {
+    const hallway = gltf.scene
+    scene.add(hallway)
+
+    // Fish idle-swim cycles baked in at export (Phase 2/4) — 24 clips, one
+    // per fish instance, never played back until now.
+    if (gltf.animations && gltf.animations.length) {
+      mixer = new THREE.AnimationMixer(hallway)
+      for (const clip of gltf.animations) {
+        mixer.clipAction(clip).play()
+      }
+    }
+
+    let walkCam = null
+    hallway.traverse((obj) => {
+      if (obj.name === 'Floor') floorMesh = obj
+      if (obj.name === 'WalkCam') walkCam = obj
+      if (THEME.colliderPrefixes.some((re) => re.test(obj.name))) colliderMeshes.push(obj)
+      if (obj.isMesh) {
+        obj.frustumCulled = true
+        if (sceneId === 'forest' && /^Forest_(Canopy_Leaves|Distant_Crowns)/.test(obj.name)) enableForestWind(obj)
+        obj.receiveShadow = obj.name !== 'Reef_Water_Surface'
+        obj.castShadow = obj.name !== 'Reef_Water_Surface' && !obj.name.startsWith('Reef_Seagrass')
+        if (sceneId === 'jumping_castle' && /^JCastle_(Venue_Roof|Roof_)/.test(obj.name)) obj.castShadow = false
+        if (obj.name === 'Reef_Water_Surface') {
+          for (const texture of [obj.material.map, obj.material.normalMap]) {
+            if (texture) surfaceTextures.push(texture)
+          }
+        }
+      }
+      // Blender's glTF exporter writes directional-light intensity in raw
+      // lux (thousands), but three.js applies it as a unitless multiplier —
+      // left as exported this blows every material out to solid white.
+      // Pin the two art-directed reef lights: Blender versions differ in lux export.
+      // Unknown lights retain the existing fallback conversion.
+      if (sceneId === 'jumping_castle' && obj.isPointLight) {
+        obj.intensity = 8
+        obj.distance = 12
+        obj.castShadow = false
+      }
+      if (obj.isDirectionalLight) {
+        const li = THEME.lightIntensities
+        obj.intensity = obj.name === 'Sun' ? li.Sun : obj.name === 'Fill' ? li.Fill : obj.intensity / li.fallbackDivisor
+        if (obj.name === 'Sun') {
+          reefSun = obj
+          obj.updateWorldMatrix(true, false)
+          obj.getWorldDirection(sunDirection)
+          obj.castShadow = true
+          obj.shadow.mapSize.set(2048, 2048)
+          Object.assign(obj.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 0.5, far: 75 })
+          obj.shadow.camera.updateProjectionMatrix()
+          obj.shadow.normalBias = 0.035
+          obj.shadow.bias = -0.00015
+          scene.add(obj.target)
+        }
+      }
+    })
+
+    // Two directional lights alone leave anything not facing the sun crushed
+    // to near-black — fine for a moody deep-water look, wrong for the bright,
+    // evenly-lit "crystal clear shallow water" target (see Museum-locations
+    // reference). A hemisphere light fills shadow sides cheaply and evenly.
+    scene.add(new THREE.HemisphereLight(THEME.hemisphere.sky, THEME.hemisphere.ground, THEME.hemisphere.intensity))
+
+    if (walkCam) {
+      walkCam.updateWorldMatrix(true, false)
+      const pos = new THREE.Vector3()
+      const quat = new THREE.Quaternion()
+      walkCam.getWorldPosition(pos)
+      walkCam.getWorldQuaternion(quat)
+      const euler = new THREE.Euler().setFromQuaternion(quat, 'YXZ')
+      camera.position.set(pos.x, EYE_HEIGHT, pos.z)
+      camera.rotation.y = euler.y
+      camera.rotation.x = 0
+    } else {
+      camera.position.set(0, EYE_HEIGHT, 0)
+    }
+
+    if (sceneId === 'forest') instanceForestFerns(hallway)
+    initArtwork(hallway)
+
+    hallway.updateMatrixWorld(true)
+    colliderBounds = colliderMeshes.map((m) => {
+      m.geometry.computeBoundingSphere()
+      const sphere = m.geometry.boundingSphere.clone().applyMatrix4(m.matrixWorld)
+      return { x: sphere.center.x, z: sphere.center.z, radius: sphere.radius }
+    })
+
+    if (sceneId === 'jumping_castle') camera.position.y = groundHeightAt(camera.position.x, camera.position.z) + EYE_HEIGHT
+    if (sceneId === 'reef') initReefEggs(hallway)
+    if (sceneId === 'forest') initForestEggs(hallway)
+    if (sceneId === 'jumping_castle') initCastleEggs(hallway)
+    if (sceneId === 'gallery_home') initGalleryEggs(hallway)
+    hallwayReady = true
+    loadingEl.style.display = 'none'
+    overlayEl.style.display = reviewMode ? 'none' : 'flex'
+    if (reviewMode) {
+      const distance = Number(reviewParams.get('distance') || 1)
+      camera.position.z = -THREE.MathUtils.clamp(Number.isFinite(distance) ? distance : 1, 1, 56)
+      if (sceneId === 'jumping_castle') camera.position.y = groundHeightAt(camera.position.x, camera.position.z) + EYE_HEIGHT
+      const reviewPitch = Number(reviewParams.get('pitch') || 0)
+      camera.rotation.x = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(Number.isFinite(reviewPitch) ? reviewPitch : 0, -60, 60))
+      setTimeout(() => {
+        renderer.render(scene, camera)
+        console.info(`${sceneId} review:`, JSON.stringify({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, camera: camera.position.toArray(), animations: gltf.animations.length }))
+        if (['forest', 'jumping_castle'].includes(sceneId) && reviewParams.get('verify') === '1') {
+          const savedPosition = camera.position.clone()
+          const savedKeys = { ...keys }
+          const groundSamples = [-1, -25, -55].map(z => groundHeightAt(0, z))
+          camera.position.set(0, EYE_HEIGHT, -1)
+          keys.forward = true
+          for (let i = 0; i < 80; i++) tick(0.05, true)
+          keys.forward = false
+          const forwardWalk = Math.abs(camera.position.z + 13.8) < 0.02
+          keys.left = true
+          for (let i = 0; i < 30; i++) tick(0.05, true)
+          keys.left = false
+          const edgeStops = camera.position.x >= THEME.walkBounds.minX && blockedAt(camera.position.x - 0.16, camera.position.z)
+          camera.position.set(0, EYE_HEIGHT, -59.4)
+          keys.forward = true
+          for (let i = 0; i < 10; i++) tick(0.05, true)
+          const endStops = camera.position.z >= THEME.walkBounds.minZ
+          Object.assign(keys, savedKeys)
+          camera.position.copy(savedPosition)
+          const results = { groundSamples, forwardWalk, edgeStops, endStops }
+          console.info(`${sceneId} movement verification:`, JSON.stringify(results))
+          if (!forwardWalk || !edgeStops || !endStops || groundSamples.some(y => sceneId === 'forest' ? Math.abs(y) > 0.02 : y < -0.03 || y > 0.14)) console.error(`${sceneId} movement verification failed`)
+        }
+      }, 1500)
+    }
+  },
+  (xhr) => {
+    if (xhr.total) {
+      const pct = Math.round((xhr.loaded / xhr.total) * 100)
+      document.getElementById('loading-text').textContent = `Loading hallway… ${pct}%`
+    }
+  },
+  (err) => {
+    console.error('Failed to load hallway glTF:', err)
+    document.getElementById('loading-text').textContent = 'Failed to load hallway — see console.'
+  }
+)
+
+// ── Artwork pool: random assignment + slow crossfade rotation ───────────
+const artworkTexLoader = new THREE.TextureLoader()
+const artworkCanvases = []   // [{ material, currentUrl }]
+let artworkPool = []         // shuffled queue of not-yet-shown URLs this pass
+let artworkAll = []
+const artworkFades = []      // [{ material, t }]
+
+function shuffled(arr) {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// Draws from a shuffled queue of the whole pool, reshuffling once it's
+// exhausted, so every photo is shown before any repeats — and never hands
+// back the one URL a given frame is already displaying.
+function nextArtworkUrl(excludeUrl) {
+  if (!artworkPool.length) artworkPool = shuffled(artworkAll)
+  let url = artworkPool.pop()
+  if (url === excludeUrl && artworkPool.length) {
+    artworkPool.unshift(url)
+    url = artworkPool.pop()
+  }
+  return url
+}
+
+function setCanvasArtwork(entry, url, { fade = false } = {}) {
+  artworkTexLoader.load(url, (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.flipY = false
+    tex.anisotropy = 4
+    const mat = entry.material
+    const oldTex = mat.map
+    mat.map = tex
+    entry.currentUrl = url
+    if (fade) {
+      mat.transparent = true
+      mat.opacity = 0
+      artworkFades.push({ material: mat, t: 0 })
+    }
+    mat.needsUpdate = true
+    if (oldTex) oldTex.dispose()
+  })
+}
+
+function scheduleArtworkRotation() {
+  const delay = ARTWORK_ROTATE_MIN_MS + Math.random() * (ARTWORK_ROTATE_MAX_MS - ARTWORK_ROTATE_MIN_MS)
+  setTimeout(() => {
+    if (artworkCanvases.length) {
+      const entry = artworkCanvases[Math.floor(Math.random() * artworkCanvases.length)]
+      setCanvasArtwork(entry, nextArtworkUrl(entry.currentUrl), { fade: true })
+    }
+    scheduleArtworkRotation()
+  }, delay)
+}
+
+function updateArtworkFades(dt) {
+  for (let i = artworkFades.length - 1; i >= 0; i--) {
+    const f = artworkFades[i]
+    f.t += dt
+    const p = Math.min(1, f.t / ARTWORK_FADE_SECONDS)
+    f.material.opacity = p
+    if (p >= 1) {
+      f.material.transparent = false
+      f.material.needsUpdate = true
+      artworkFades.splice(i, 1)
+    }
+  }
+}
+
+// The reef and forest GLBs export their Canvas_* quads with no TEXCOORD_0
+// at all (gallery_home and jumping_castle export them fine — an existing
+// gap in those two themes' Blender→glTF pipeline, not something a runtime
+// fix should mask by regenerating exports). Canvas geometry is always a
+// flat 4-vert quad, width along local X per hallway_kit.py's
+// place_frame_and_canvas — so a UV can be reconstructed from each vertex's
+// position within the quad's own local bounding box. The "height" axis
+// isn't consistent across themes, though: wall-mounted canvases
+// (gallery/jumping_castle) author it along local Z as hallway_kit does,
+// but reef/forest's export bakes an applied ~90° rotation into the canvas
+// mesh that moves that same span onto local Y (Z collapses to ~0 there) —
+// so detect whichever of Y/Z actually varies rather than assuming Z.
+function ensureCanvasUV(mesh) {
+  const geo = mesh.geometry
+  if (geo.attributes.uv) return
+  const pos = geo.attributes.position
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i)
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+    if (z < minZ) minZ = z
+    if (z > maxZ) maxZ = z
+  }
+  const useY = (maxY - minY) > (maxZ - minZ)
+  const minV = useY ? minY : minZ
+  const spanV = (useY ? maxY - minY : maxZ - minZ) || 1
+  const spanU = (maxX - minX) || 1
+  // The applied rotation that moves height onto Y also reverses its
+  // direction relative to Z (confirmed visually — without the flip here,
+  // reef/forest artwork renders upside down), so invert v only in that case.
+  const uv = new Float32Array(pos.count * 2)
+  for (let i = 0; i < pos.count; i++) {
+    const v = useY ? pos.getY(i) : pos.getZ(i)
+    let vNorm = (v - minV) / spanV
+    if (useY) vNorm = 1 - vNorm
+    uv[i * 2 + 0] = (pos.getX(i) - minX) / spanU
+    uv[i * 2 + 1] = vNorm
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+}
+
+async function initArtwork(root) {
+  const images = await artworkManifestPromise
+  if (!Array.isArray(images) || !images.length) {
+    console.warn('Artwork manifest empty or missing — run tools/prepare_artwork.py')
+    return
+  }
+  artworkAll = images.map((name) => ARTWORK_BASE + name)
+  artworkPool = shuffled(artworkAll)
+
+  const canvasNodes = []
+  root.traverse((obj) => { if (obj.isMesh && /^Canvas_/.test(obj.name)) canvasNodes.push(obj) })
+  for (const node of canvasNodes) {
+    ensureCanvasUV(node)
+    node.material = node.material.clone()
+    const entry = { material: node.material, currentUrl: null }
+    artworkCanvases.push(entry)
+    setCanvasArtwork(entry, nextArtworkUrl())
+  }
+  scheduleArtworkRotation()
+}
+
+// ── Pointer lock first-person controls (desktop) ────────────────────────
+const controls = new PointerLockControls(camera, renderer.domElement)
+const isTouchDevice = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window
+if (isTouchDevice) document.body.classList.add('is-touch')
+document.querySelectorAll('.desktop-hint').forEach((el) => { el.style.display = isTouchDevice ? 'none' : '' })
+document.querySelectorAll('.touch-hint').forEach((el) => { el.style.display = isTouchDevice ? '' : 'none' })
+if (isTouchDevice) {
+  document.getElementById('overlay-cta').textContent = 'Tap to walk in'
+  document.getElementById('nav-hint').textContent = 'The tiles bottom-left jump straight to any wing'
+}
+
+overlayEl.addEventListener('click', () => {
+  if (!hallwayReady) return
+  if (isTouchDevice) startMobileExperience()
+  else controls.lock()
+})
+controls.addEventListener('lock', () => {
+  overlayEl.style.display = 'none'
+  crosshairEl.style.display = 'block'
+  hudEl.classList.add('show')
+})
+controls.addEventListener('unlock', () => {
+  if (hallwayReady) overlayEl.style.display = 'flex'
+  crosshairEl.style.display = 'none'
+})
+renderer.domElement.addEventListener('click', () => {
+  if (controls.isLocked) tryClickHotspot()
+})
+
+const keys = { forward: false, back: false, left: false, right: false }
+window.addEventListener('keydown', (e) => {
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp': keys.forward = true; break
+    case 'KeyS': case 'ArrowDown': keys.back = true; break
+    case 'KeyA': case 'ArrowLeft': keys.left = true; break
+    case 'KeyD': case 'ArrowRight': keys.right = true; break
+    case 'KeyC':
+      colliderMeshes.forEach((m) => (m.material.wireframe = !m.material.wireframe))
+      break
+    case 'Space':
+      e.preventDefault()
+      if (!e.repeat) tryJump()
+      break
+  }
+})
+window.addEventListener('keyup', (e) => {
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp': keys.forward = false; break
+    case 'KeyS': case 'ArrowDown': keys.back = false; break
+    case 'KeyA': case 'ArrowLeft': keys.left = false; break
+    case 'KeyD': case 'ArrowRight': keys.right = false; break
+  }
+})
+
+// ── Mobile controls: tilt-to-look + on-screen forward/back buttons ──────
+// Pointer Lock has no touch equivalent, so touch devices skip `controls`
+// entirely and drive the same `camera`/`keys` state that desktop mouse+
+// keyboard would, via a separate code path gated by `mobileActive`.
+let mobileActive = false
+let useOrientationLook = false
+const mobileControlsEl = document.getElementById('mobile-controls')
+
+// Classic device-orientation → camera-quaternion conversion (the algorithm
+// behind three.js's now-removed DeviceOrientationControls example) — phone
+// held vertically in front of you like a window, tilt to look around.
+const _zee = new THREE.Vector3(0, 0, 1)
+const _q0 = new THREE.Quaternion()
+const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)) // -PI/2 around world X
+let orientationYawOffset = null // calibrated on first reading so "however you're holding the phone" = current facing
+function applyDeviceOrientation(evt) {
+  if (evt.alpha === null) return // some browsers fire a null-filled event once before real sensor data arrives
+  const alpha = THREE.MathUtils.degToRad(evt.alpha)
+  const beta = THREE.MathUtils.degToRad(evt.beta || 0)
+  const gamma = THREE.MathUtils.degToRad(evt.gamma || 0)
+  const screenAngle = THREE.MathUtils.degToRad(screen.orientation?.angle ?? window.orientation ?? 0)
+  if (orientationYawOffset === null) orientationYawOffset = camera.rotation.y - alpha
+  useOrientationLook = true
+  const euler = new THREE.Euler(beta, alpha + orientationYawOffset, -gamma, 'YXZ')
+  camera.quaternion.setFromEuler(euler)
+  camera.quaternion.multiply(_q1)
+  camera.quaternion.multiply(_q0.setFromAxisAngle(_zee, -screenAngle))
+}
+
+// Fallback for devices/browsers with no usable orientation sensor (denied
+// permission, desktop touchscreens, some Android browsers): drag anywhere
+// on the screen outside the move buttons to look around, mouse-look style.
+const dragLook = { active: false, lastX: 0, lastY: 0 }
+const LOOK_SENSITIVITY = 0.0028
+const PITCH_LIMIT = Math.PI / 2 - 0.05
+// A tap (short duration, little movement) on the scene also fires a click
+// hotspot — distinguished from a look-drag by displacement, not by device,
+// so it works whether orientation-look or drag-look is active this session.
+const tapTrack = { startTime: 0, startX: 0, startY: 0 }
+function onTouchLookStart(e) {
+  if (!mobileActive) return
+  const t = e.touches[0]
+  tapTrack.startTime = performance.now()
+  tapTrack.startX = t.clientX
+  tapTrack.startY = t.clientY
+  if (useOrientationLook) return
+  dragLook.active = true
+  dragLook.lastX = t.clientX
+  dragLook.lastY = t.clientY
+}
+function onTouchLookMove(e) {
+  if (!dragLook.active) return
+  const t = e.touches[0]
+  const dx = t.clientX - dragLook.lastX
+  const dy = t.clientY - dragLook.lastY
+  dragLook.lastX = t.clientX
+  dragLook.lastY = t.clientY
+  camera.rotation.y -= dx * LOOK_SENSITIVITY
+  camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x - dy * LOOK_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
+}
+function onTouchLookEnd(e) {
+  dragLook.active = false
+  const t = e.changedTouches[0]
+  const dx = t.clientX - tapTrack.startX, dy = t.clientY - tapTrack.startY
+  if (performance.now() - tapTrack.startTime < 300 && dx * dx + dy * dy < 100) tryClickHotspot()
+}
+
+function bindMoveButton(el, key) {
+  const set = (v) => (e) => { e.preventDefault(); keys[key] = v; el.classList.toggle('active', v) }
+  el.addEventListener('touchstart', set(true), { passive: false })
+  el.addEventListener('touchend', set(false), { passive: false })
+  el.addEventListener('touchcancel', set(false), { passive: false })
+  // Mouse events too, so this also works on touch-capable laptops/tablets with a mouse.
+  el.addEventListener('mousedown', set(true))
+  window.addEventListener('mouseup', set(false))
+}
+bindMoveButton(document.getElementById('btn-forward'), 'forward')
+bindMoveButton(document.getElementById('btn-back'), 'back')
+
+function startMobileExperience() {
+  document.documentElement.requestFullscreen?.().catch(() => {})
+  const attachOrientation = () => window.addEventListener('deviceorientation', applyDeviceOrientation)
+  const requestPermission = window.DeviceOrientationEvent?.requestPermission
+  if (typeof requestPermission === 'function') {
+    requestPermission().then((state) => { if (state === 'granted') attachOrientation() }).catch(() => {})
+  } else if (window.DeviceOrientationEvent) {
+    attachOrientation()
+  }
+  renderer.domElement.addEventListener('touchstart', onTouchLookStart, { passive: true })
+  renderer.domElement.addEventListener('touchmove', onTouchLookMove, { passive: true })
+  renderer.domElement.addEventListener('touchend', onTouchLookEnd, { passive: true })
+  mobileActive = true
+  overlayEl.style.display = 'none'
+  crosshairEl.style.display = 'block'
+  mobileControlsEl.classList.add('show')
+  hudEl.classList.add('show')
+}
+
+// ── Jumping (jumping_castle only) ────────────────────────────────────────
+// height/velocityY/forwardSpeed are integrated in tick() only while
+// `jumping` is true, so idle scenes and non-castle themes pay zero cost.
+let jumpHeight = 0
+let jumpVelocityY = 0
+let jumpForwardSpeed = 0
+let jumping = false
+// Set to sqrt(2) by the "Super Bounce Ridge" egg (TODO.md World 3) for a
+// one-shot ~2x-height next jump — height scales with velocity squared, so
+// a sqrt(2) velocity multiplier doubles peak height. Consumed on next use.
+let bounceBoostMultiplier = 1
+
+function tryJump() {
+  if (sceneId !== 'jumping_castle' || !hallwayReady) return
+  if (!(controls.isLocked || mobileActive)) return
+  if (jumpHeight > JUMP_REJUMP_THRESHOLD) return // must be back near the floor to jump again
+  jumpVelocityY = JUMP_VELOCITY * bounceBoostMultiplier
+  bounceBoostMultiplier = 1
+  jumpForwardSpeed = JUMP_FORWARD_BOOST
+  jumping = true
+}
+
+if (sceneId === 'jumping_castle') mobileControlsEl.classList.add('jumping-castle')
+function bindJumpButton(el) {
+  const press = (e) => { e.preventDefault(); el.classList.add('active'); tryJump() }
+  const release = (e) => { e.preventDefault(); el.classList.remove('active') }
+  el.addEventListener('touchstart', press, { passive: false })
+  el.addEventListener('touchend', release, { passive: false })
+  el.addEventListener('touchcancel', release, { passive: false })
+  el.addEventListener('mousedown', press)
+  window.addEventListener('mouseup', release)
+}
+bindJumpButton(document.getElementById('btn-jump'))
+
+if (sceneId === 'jumping_castle') {
+  const desktopHint = document.querySelector('.desktop-hint')
+  if (desktopHint) desktopHint.textContent += ' · Space to jump'
+  const touchHint = document.querySelector('.touch-hint')
+  if (touchHint) touchHint.textContent += ' · 🦘 to bounce'
+}
+
+// ── Collision helpers ────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster()
+const DOWN = new THREE.Vector3(0, -1, 0)
+
+function groundHeightAt(x, z) {
+  if (!floorMesh) return FALLBACK_GROUND_Y
+  raycaster.set(new THREE.Vector3(x, 50, z), DOWN)
+  raycaster.far = 200
+  const hits = raycaster.intersectObject(floorMesh, false)
+  return hits.length ? hits[0].point.y : FALLBACK_GROUND_Y
+}
+
+// Circle-vs-circle test in the XZ plane rather than a thin raycast — a
+// single-axis ray with a short range can slip between sparse, thin
+// colliders (posts ~3m apart) without ever registering a hit.
+function blockedAt(x, z) {
+  const bounds = THEME.walkBounds
+  if (bounds && (x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ)) return true
+  for (const c of colliderBounds) {
+    const dx = x - c.x
+    const dz = z - c.z
+    const minDist = COLLISION_RADIUS + c.radius
+    if (dx * dx + dz * dz < minDist * minDist) return true
+  }
+  return false
+}
+
+// ── Animation loop ────────────────────────────────────────────────────────
+const clock = new THREE.Clock()
+const forwardVec = new THREE.Vector3()
+const rightVec = new THREE.Vector3()
+const moveVec = new THREE.Vector3()
+
+// Drift particles upward and recycle any that fall too far behind/ahead of
+// the walking camera, so the field always reads as a constant ambient haze
+// of suspended particulates rather than a fixed band in world space.
+function updateParticles(dt, camZ) {
+  const arr = particleGeo.attributes.position.array
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const iy = i * 3 + 1
+    arr[iy] += particleSpeeds[i] * dt
+    if (arr[iy] > 3.0) arr[iy] = 0.1
+    const iz = i * 3 + 2
+    const dz = arr[iz] - camZ
+    if (dz > PARTICLE_FIELD_RADIUS) arr[iz] -= PARTICLE_FIELD_RADIUS * 2
+    else if (dz < -PARTICLE_FIELD_RADIUS) arr[iz] += PARTICLE_FIELD_RADIUS * 2
+  }
+  particleGeo.attributes.position.needsUpdate = true
+}
+
+function tick(dt, forced) {
+  forestWindTime.value += dt
+  if (hallwayReady && (controls.isLocked || mobileActive || forced)) {
+    camera.getWorldDirection(forwardVec)
+    forwardVec.y = 0
+    forwardVec.normalize()
+    rightVec.crossVectors(forwardVec, camera.up).normalize()
+
+    moveVec.set(0, 0, 0)
+    if (keys.forward) moveVec.add(forwardVec)
+    if (keys.back) moveVec.sub(forwardVec)
+    if (keys.right) moveVec.add(rightVec)
+    if (keys.left) moveVec.sub(rightVec)
+    if (moveVec.lengthSq() > 0) {
+      moveVec.normalize().multiplyScalar(MOVE_SPEED * dt)
+
+      if (moveVec.x !== 0 && !blockedAt(camera.position.x + moveVec.x, camera.position.z)) {
+        camera.position.x += moveVec.x
+      }
+      if (moveVec.z !== 0 && !blockedAt(camera.position.x, camera.position.z + moveVec.z)) {
+        camera.position.z += moveVec.z
+      }
+    }
+
+    if (jumping) {
+      jumpVelocityY += JUMP_GRAVITY * dt
+      jumpHeight += jumpVelocityY * dt
+      if (jumpHeight <= 0) {
+        jumpHeight = 0
+        if (jumpVelocityY < -JUMP_MIN_BOUNCE_VELOCITY) {
+          jumpVelocityY = -jumpVelocityY * JUMP_BOUNCE_DAMPING // settle bounce, losing most of its energy each time
+        } else {
+          jumpVelocityY = 0
+          jumping = false
+        }
+        onJumpLanding()
+      }
+      if (jumpForwardSpeed > 0.005) {
+        const jx = forwardVec.x * jumpForwardSpeed * dt
+        const jz = forwardVec.z * jumpForwardSpeed * dt
+        if (jx !== 0 && !blockedAt(camera.position.x + jx, camera.position.z)) camera.position.x += jx
+        if (jz !== 0 && !blockedAt(camera.position.x, camera.position.z + jz)) camera.position.z += jz
+        jumpForwardSpeed *= Math.pow(JUMP_FORWARD_DECAY, dt)
+      } else {
+        jumpForwardSpeed = 0
+      }
+    }
+
+    const groundY = groundHeightAt(camera.position.x, camera.position.z)
+    camera.position.y = groundY + EYE_HEIGHT + jumpHeight
+  }
+  for (const texture of surfaceTextures) {
+    texture.offset.x += dt * 0.003
+    texture.offset.y += dt * 0.0015
+  }
+  if (reefSun) {
+    // Keep one modest shadow map focused on the visible walking area.
+    reefSun.target.position.set(camera.position.x, 0, camera.position.z - 8)
+    reefSun.position.copy(reefSun.target.position).addScaledVector(sunDirection, 30)
+    reefSun.target.updateMatrixWorld()
+  }
+  if (forestSky) forestSky.update(dt, camera, sunDirection)
+  updateArtworkFades(dt)
+  updateParticles(dt, camera.position.z)
+  if (mixer) mixer.update(dt)
+  // Runs after mixer.update so additive egg effects (e.g. a fish's barrel
+  // roll or follow-pull) layer on top of that frame's clip-driven pose
+  // instead of being immediately overwritten by it.
+  updateEggAnimations(dt)
+  if (controls.isLocked || mobileActive) updateProximityHotspots()
+  updateHotspotHoverHint()
+  composer.render()
+  if (reviewMode && reviewParams.get('verify') !== '1' && hallwayReady && reviewFrameTimes.length < 180 && document.visibilityState === 'visible') {
+    const now = performance.now()
+    if (reviewLastFrame) reviewFrameTimes.push(now - reviewLastFrame)
+    reviewLastFrame = now
+    if (reviewFrameTimes.length === 180) {
+      const frames = reviewFrameTimes.slice(60).sort((a, b) => a - b)
+      console.info(`${sceneId} frame timing:`, JSON.stringify({ medianMs: frames[60], p95Ms: frames[114], meanFps: 1000 / (frames.reduce((a,b) => a+b, 0) / frames.length) }))
+    }
+  }
+}
+
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1)
+  tick(dt, window.__debug?.forceLocked)
+})
+
+// Debug hook — lets automated testing drive movement when Pointer Lock is
+// unavailable (e.g. under CDP browser automation). No effect on normal play.
+window.__debug = {
+  camera, keys, colliderMeshes, groundHeightAt, blockedAt, renderer, composer, scene,
+  getMixer: () => mixer,
+  forceLocked: false, THREE,
+  getFloorMesh: () => floorMesh,
+  getColliderBounds: () => colliderBounds,
+  getForward: () => { const v = new THREE.Vector3(); camera.getWorldDirection(v); v.y = 0; v.normalize(); return [v.x, v.y, v.z] },
+  step: (n = 1, dt = 0.05) => { for (let i = 0; i < n; i++) tick(dt, true) },
+  startMobileExperience,
+  isMobileActive: () => mobileActive,
+  isOrientationLook: () => useOrientationLook,
+  simulateOrientation: applyDeviceOrientation,
+  hotspots, getEggsTotal: () => eggsTotal, getFoundEggs: () => [...foundEggs],
+  triggerHotspot: (id) => { const h = hotspots.find((x) => x.id === id); if (h) { h.run(h); markFound(h.id, h.name) } },
+  findAimedClickHotspot, updateHotspotHoverHint,
+  getHoverHint: () => ({ crosshairHotspot: crosshairEl.classList.contains('hotspot'), hintText: hotspotHintEl.textContent, hintShown: hotspotHintEl.classList.contains('show') }),
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  composer.setSize(window.innerWidth, window.innerHeight)
+  bloomPass.setSize(window.innerWidth, window.innerHeight)
+})
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Allowlist: this project folder also holds personal photos/videos, an
+# unrelated "beautiful people project", and large Blender source/backup
+# files that don't belong in the public site repo. Ignore everything by
+# default and explicitly un-ignore only what the deployed site needs.
+/*
+!/.gitignore
+!/index.html
+!/CLAUDE.md
+!/TODO.md
+!/web/
+!/exports/
+!/tools/
+
+# Even inside the tracked folders, never track OS cruft, Blender's own
+# backup/lock files, or regenerable Python/texture caches.
+.DS_Store
+*.blend1
+*.blend2
+__pycache__/
+*.pyc
+tools/_texture_cache/
