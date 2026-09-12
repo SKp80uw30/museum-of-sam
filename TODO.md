@@ -402,3 +402,30 @@ The browser access limit noted for the earlier homepage pass is no longer blocki
 - [x] Scattered figures around the side gardens, with name signs and wave reactions.
 - [x] Exact filename-derived “{name} says Happy Birthday Sammy” messages; all 17 verified via browser clicks without errors.
 - [x] Character manifest coverage and birthday controller regression checks passed.
+
+### Four new characters + Jay renamed to J-Don — 2026-09-12
+- [x] Renamed `characters/Jay.JPG` to `J-Don.JPG` (source file already renamed by user); updated the one code
+      reference in `garden-characters.mjs` — `birthdayName()` derives the displayed/egg name from the filename,
+      so this alone fixes both the homepage figure and every egg-hunt occurrence. Historical dated log entries
+      elsewhere in this file that quote old screenshots (e.g. "👀 Jay (found)") are left as accurate history,
+      not live references.
+- [x] Reviewed the 4 new reference photos (`characters/Liam.png`, `Nancy.png`, `Orla.png`, `Kieran.png`) for
+      hair colour/style and rough shirt colour only, per the existing convention — never displayed the photos.
+      Added all 4 to `CHARACTERS` in `garden-characters.mjs` with a smaller `scale:0.82` for the three kids
+      (Liam, Nancy, Orla; Kieran is an adult, default scale) and `x,z` slotted into gaps in the existing left/right
+      garden clusters (2 per side) with >=1.8 unit spacing from neighbors, clear of the centre CTA/pergola.
+- [x] No other code changes needed for either homepage avatars or the egg hunt: `garden-people.js` builds
+      homepage figures directly from `CHARACTERS`, and `POPUP_CHARACTERS` in `web/index.html` is built from
+      `CHARACTERS` + `HONEY_FILE` + 5 birds and indexed with `% POPUP_CHARACTERS.length`, so both picked up
+      the roster growing from 22 to 26 automatically — new characters now appear as egg-hunt finds in forest,
+      jumping_castle and gallery_home (their offset slice doesn't reach reef, same as pre-existing Chaz).
+- [x] Bumped the shared `garden-characters.mjs?v=` cache-busting query (2 → 3) in `garden-people.js`,
+      `living-home.js` and `web/index.html`, the `garden-people.js?v=` query (2 → 3) in `living-home.js`,
+      and the service-worker `CACHE_NAME` in `web/sw.js` (`v5-characters` → `v6-characters`) so both the
+      module cache-busting and the PWA shell precache pick up the new roster on next deploy.
+- [x] Verified: `node --check` on the 3 touched JS/mjs files, `node tools/check_birthday_home.mjs` regression
+      pass, and a live browser pass — homepage garden renders all 4 new figures with correct name signs and no
+      overlap/clipping; all 4 museum worlds report `getEggsTotal() === 15` with zero console errors; confirmed
+      via `window.__debug.hotspots` that Liam/Nancy/Orla/Kieran appear in forest, castle and gallery_home
+      hotspot lists and J-Don (not Jay) appears in reef, castle and gallery_home; triggered the Liam hotspot
+      in forest end-to-end (open animation + confetti + toast + HUD increment to 1/15) with no errors.

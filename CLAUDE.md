@@ -90,12 +90,19 @@ images demand.
   freestanding-post) stays out of this file and is passed in as
   parameters/materials by the calling scene script, matching the
   walls/posts precedent below (shared logic, per-theme dressing).
-- `tools/prepare_artwork.py` — converts `photos-from-chaz/` into
-  `web/artwork/chaz/*.jpg` + `web/artwork/chaz-manifest.json`. Re-run any
-  time photos are added/removed there; see the 2026-09-11 TODO.md entry
-  for what the runtime does with the resulting pool (random per-load
-  assignment across every theme's canvases, plus a slow crossfade
-  rotation) and a real export bug it uncovered (see below).
+- `tools/prepare_artwork.py` — converts `Photos/` into
+  `web/artwork/photos/*.jpg` + `web/artwork/photos-manifest.json`. `Photos/`
+  is scanned recursively, so just drop new photos — individually or as
+  whole subfolders — anywhere under it and re-run the script; nothing else
+  needs to change for them to enter the pool. The manifest is fully
+  regenerated each run, so removed source files stop appearing too. See
+  the 2026-09-11 TODO.md entry for what the runtime does with the
+  resulting pool (random per-load assignment across every theme's
+  canvases, plus a slow crossfade rotation) and a real export bug it
+  uncovered (see below). (Folder was renamed from `photos-from-chaz/` and
+  the script made recursive on 2026-09-12 — the old script only scanned
+  the top level, so a pre-existing `us-photos/` subfolder had silently
+  never been included until then.)
 
 ## Working conventions
 

@@ -2,7 +2,7 @@
 export const birthdayName = filename => filename.replace(/\.[^.]+$/, '').replaceAll('_', ' ')
 export const birthdayGreeting = filename => `${birthdayName(filename)} says Happy Birthday Sammy`
 export const CHARACTERS = [
- {file:'Jay.JPG',x:-11,z:3,hair:'#967044',style:'spiky',shirt:'#62bbe5',beard:true,topGlasses:true},
+ {file:'J-Don.JPG',x:-11,z:3,hair:'#967044',style:'spiky',shirt:'#62bbe5',beard:true,topGlasses:true},
  {file:'Grandpa.jpg',x:-16.8,z:-1,hair:'#eeece1',style:'balding',shirt:'#253e50',moustache:true,bow:true},
  {file:'Kylie.png',x:16,z:2,hair:'#423229',style:'shoulder',shirt:'#21506a',glasses:true,flower:'#be7edb'},
  {file:'Charlotte.png',x:-14,z:0,hair:'#664c34',style:'braided',shirt:'#8adecd'},
@@ -18,5 +18,9 @@ export const CHARACTERS = [
  {file:'Sam_aka_I_Love_Me.PNG',x:9,z:2,hair:'#a28d70',style:'shoulder',shirt:'#087e96',highlights:true},
  {file:'English_Steve.png',x:18,z:-1,hair:'#837968',style:'short',shirt:'#2b4352',hat:true,sunglasses:'#703e2f'},
  {file:'Chaz.JPG',x:-18,z:5.8,hair:'#2d2524',style:'shoulder',shirt:'#e8f7ef',freckles:true},
+ {file:'Liam.png',x:-11.5,z:5,hair:'#5c4632',style:'spiky',shirt:'#3fa796',scale:0.82},
+ {file:'Nancy.png',x:10.5,z:4.5,hair:'#a9855f',style:'shoulder',shirt:'#f2b134',scale:0.82},
+ {file:'Orla.png',x:-15,z:2,hair:'#5b4632',style:'long',shirt:'#8a5fbf',flower:'#ff8fc7',scale:0.82},
+ {file:'Kieran.png',x:17,z:5.5,hair:'#3b2e22',style:'curly',shirt:'#22344a'},
 ]
 export const HONEY_FILE='Honey_with_tutu.png'

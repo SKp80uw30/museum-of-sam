@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three/build/three.module.js'
-import {CHARACTERS,birthdayName,birthdayGreeting} from './garden-characters.mjs?v=2'
+import {CHARACTERS,birthdayName,birthdayGreeting} from './garden-characters.mjs?v=3'
 
 export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime}) {
  // Merge rigid details by material inside each character, keeping arms articulated.

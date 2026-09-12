@@ -1,15 +1,16 @@
 """
-Convert photos-from-chaz/ into web-sized artwork for the hallway frame
-canvases and write a manifest the browser can fetch at runtime.
+Convert Photos/ into web-sized artwork for the hallway frame canvases and
+write a manifest the browser can fetch at runtime.
 
 Run from the repo root:
 
     python3 tools/prepare_artwork.py
 
-Source photos are never modified — this only reads photos-from-chaz/ and
-(re)writes web/artwork/chaz/*.jpg + web/artwork/chaz-manifest.json. Re-run
-any time photos are added or removed there; the manifest is fully
-regenerated each run so removed source files stop appearing.
+Source photos are never modified — this only reads Photos/ (recursively,
+including any subfolders dropped in there) and (re)writes
+web/artwork/photos/*.jpg + web/artwork/photos-manifest.json. Re-run any
+time photos are added or removed there; the manifest is fully regenerated
+each run so removed source files stop appearing.
 
 HEIC sources go through macOS's `sips` first (Pillow has no built-in HEIC
 decoder) into a temp JPEG, then every image is re-opened with Pillow,
@@ -26,9 +27,9 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SRC_DIR = REPO_ROOT / "photos-from-chaz"
-OUT_DIR = REPO_ROOT / "web" / "artwork" / "chaz"
-MANIFEST_PATH = REPO_ROOT / "web" / "artwork" / "chaz-manifest.json"
+SRC_DIR = REPO_ROOT / "Photos"
+OUT_DIR = REPO_ROOT / "web" / "artwork" / "photos"
+MANIFEST_PATH = REPO_ROOT / "web" / "artwork" / "photos-manifest.json"
 MAX_EDGE = 1600
 JPEG_QUALITY = 82
 
@@ -86,8 +87,10 @@ def main():
         existing.unlink()
 
     sources = sorted(
-        p for p in SRC_DIR.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+        p for p in SRC_DIR.rglob("*")
+        if p.is_file()
+        and p.suffix.lower() in IMAGE_EXTS
+        and not any(part.startswith(".") for part in p.relative_to(SRC_DIR).parts)
     )
     if not sources:
         print(f"No source images found in {SRC_DIR}", file=sys.stderr)

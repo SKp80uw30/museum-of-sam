@@ -177,7 +177,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import { CHARACTERS, birthdayName, HONEY_FILE } from './garden-characters.mjs?v=1'
+import { CHARACTERS, birthdayName, HONEY_FILE } from './garden-characters.mjs?v=3'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tunables — per-theme. Every 5 scenes shares this one loader (Phase 5/7);
@@ -326,13 +326,14 @@ const FOG_DENSITY = THEME.fogDensity
 
 // Real artwork is swapped into every Canvas_* mesh (see the glTF export) at
 // runtime from a shared pool of photos — see tools/prepare_artwork.py, which
-// converts photos-from-chaz/ into web/artwork/chaz/*.jpg plus this manifest.
+// converts Photos/ (drop in any file or folder of photos, recursively) into
+// web/artwork/photos/*.jpg plus this manifest.
 // Every wing draws its own random, non-repeating subset of the pool on each
 // page load (no theme owns specific photos), and frames keep quietly
 // reshuffling to a fresh, unused photo every so often while you walk — so
 // no two logins, and no two long visits, look quite the same.
-const ARTWORK_BASE = './artwork/chaz/'
-const ARTWORK_MANIFEST_URL = './artwork/chaz-manifest.json'
+const ARTWORK_BASE = './artwork/photos/'
+const ARTWORK_MANIFEST_URL = './artwork/photos-manifest.json'
 const ARTWORK_ROTATE_MIN_MS = 45000
 const ARTWORK_ROTATE_MAX_MS = 100000
 const ARTWORK_FADE_SECONDS = 0.9
