@@ -109,7 +109,7 @@ addEventListener('keydown',event=>{if(event.key==='Escape'&&state==='journey')se
 // leaves the invitation and destinations usable through the original fallback.
 function gardenMessage(message){const toast=document.querySelector('#garden-toast');toast.querySelector('span').textContent=message;toast.hidden=false}
 if(typeof WebGLRenderingContext!=='undefined'){
- import('./living-home.js?v=characters2').then(({createLivingHome})=>{
+ import('./living-home.js?v=party1').then(({createLivingHome})=>{
   living=createLivingHome({container:document.querySelector('#living-pan'),onMessage:gardenMessage,reducedMotion:reduced})
   document.body.classList.add('living-ready');living.resize(true);living.setActive(state==='welcome'||state==='portals')
   const actions=document.querySelector('#garden-actions')
@@ -123,3 +123,51 @@ document.querySelector('#garden-toast button').addEventListener('click',()=>{doc
 addEventListener('keydown',event=>{if(event.key==='Escape'){const menu=document.querySelector('#garden-menu');if(!menu.hidden){menu.hidden=true;document.querySelector('#garden-discover').setAttribute('aria-expanded','false');document.querySelector('#garden-discover').focus()}}})
 
 document.querySelectorAll('#garden-pan-controls button').forEach((button,i)=>button.addEventListener('click',()=>document.querySelector('#living-pan').scrollBy({left:(i?1:-1)*innerWidth*.7,behavior:reduced?'instant':'smooth'})))
+
+// "Party": ten seconds of nightclub lights/lasers (CSS, #party-overlay), every
+// character jumping (living.party() flips a shared flag their own per-frame
+// callbacks already watch — see living-home.js/garden-people.js), and a randomly
+// picked Spotify song from whoever's nominated one in characters/messages.txt
+// (extracted to party-songs.json by tools/prepare_party_songs.py).
+let partySongsPromise=null,partyActive=false,spotifyIframeApiPromise=null
+function loadPartySongs(){
+ partySongsPromise??=fetch('./party-songs.json').then(r=>r.ok?r.json():[]).catch(()=>[])
+ return partySongsPromise
+}
+function loadSpotifyIframeApi(){
+ spotifyIframeApiPromise??=new Promise(resolve=>{
+  window.onSpotifyIframeApiReady=IFrameAPI=>resolve(IFrameAPI)
+  const tag=document.createElement('script');tag.src='https://open.spotify.com/embed/iframe-api/v1';tag.async=true
+  document.body.append(tag)
+ })
+ return spotifyIframeApiPromise
+}
+async function startParty(){
+ if(partyActive)return
+ if(!living){gardenMessage('Just a moment — the garden is still waking up.');return}
+ if(!living.party())return
+ partyActive=true
+ const button=document.querySelector('#garden-party');button.disabled=true
+ document.body.classList.add('party-mode')
+ let mount=null,controller=null
+ const songs=await loadPartySongs()
+ if(songs.length){
+  const pick=songs[Math.floor(Math.random()*songs.length)]
+  gardenMessage(`🎉 Party time! Playing ${pick.character}’s pick…`)
+  try{
+   const IFrameAPI=await loadSpotifyIframeApi()
+   const player=document.querySelector('#party-player');player.hidden=false
+   mount=document.createElement('div');player.append(mount)
+   IFrameAPI.createController(mount,{uri:`spotify:track:${pick.trackId}`,width:'100%',height:'152'},c=>{controller=c;c.addListener('ready',()=>c.play())})
+  }catch(error){console.error('Party music could not start',error)}
+ }else{
+  gardenMessage('🎉 Party time! Nominate a song in characters/messages.txt for next time.')
+ }
+ setTimeout(()=>{
+  document.body.classList.remove('party-mode')
+  partyActive=false;button.disabled=false
+  controller?.pause();controller?.destroy?.()
+  const player=document.querySelector('#party-player');player.hidden=true;mount?.remove()
+ },10000)
+}
+document.querySelector('#garden-party').addEventListener('click',startParty)

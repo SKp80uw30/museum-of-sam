@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three/build/three.module.js'
 import {CHARACTERS,birthdayName,birthdayGreeting} from './garden-characters.mjs?v=3'
 
-export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime}) {
+export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime,partyState={}}) {
  // Merge rigid details by material inside each character, keeping arms articulated.
  function consolidate(g){const sets=new Map();for(const o of [...g.children])if(o.isMesh){const key=o.material.uuid;if(!sets.has(key))sets.set(key,[]);sets.get(key).push(o)}
  for(const items of sets.values()){if(items.length<2)continue;const pos=[],normal=[],uv=[];for(const o of items){o.updateMatrix();const geo=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone());geo.applyMatrix4(o.matrix);pos.push(...geo.attributes.position.array);normal.push(...geo.attributes.normal.array);if(geo.attributes.uv)uv.push(...geo.attributes.uv.array);else uv.push(...new Array(geo.attributes.position.count*2).fill(0));geo.dispose();g.remove(o)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normal,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));mesh(g,geo,items[0].material)} }
@@ -32,7 +32,12 @@ export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinde
  if(d.freckles)for(const s of [-1,1])for(let i=0;i<3;i++)ball(g,'#986f52',[s*(.13+i*.04),1.82+(i%2)*.035,.27],[.01,.009,.009])
  const arms=[-1,1].map(s=>{const a=group(g,[s*.35,1.45,0]);rod(a,[0,0,0],[s*.12,-.55,.06],.10,d.shirt);ball(a,skin,[s*.12,-.57,.06],[.12,.13,.11]);if(d.stripe)rod(a,[s*.08,-.05,.07],[s*.17,-.49,.11],.025,d.stripe);return a});let until=0
  consolidate(g);surprise(name,`${name}: Happy Birthday Sammy`,g,()=>{until=getTime()+5;burst([x,2.6,z],'#ff82bc');onMessage(birthdayGreeting(d.file));softNotes([330,440,554])})
- callbacks.push(t=>{g.rotation.y=Math.sin(t*.4+x)*.07;g.position.y=.25+Math.sin(t*1.4+x)*.025;arms[1].rotation.z=t<until?2.3+Math.sin(t*9)*.3:Math.sin(t+x)*.06;arms[0].rotation.z=Math.sin(t+x)*.05})
+ // At the party, everyone jumps to their own beat (phase-offset by x, like a real crowd) with both arms thrown up.
+ callbacks.push(t=>{const partying=partyState.active
+ g.rotation.y=partying?Math.sin(t*6+x)*.05:Math.sin(t*.4+x)*.07
+ g.position.y=partying?.25+Math.abs(Math.sin(t*7+x*2))*.55:.25+Math.sin(t*1.4+x)*.025
+ arms[1].rotation.z=partying?2.4+Math.sin(t*10+x)*.4:(t<until?2.3+Math.sin(t*9)*.3:Math.sin(t+x)*.06)
+ arms[0].rotation.z=partying?-2.4+Math.sin(t*10+x+1)*.4:Math.sin(t+x)*.05})
  textSign(name,[x,(d.crown?3.5:2.95)*scale,z],name.length>15?3.6:name.length>9?2.5:1.8)
  }
 }

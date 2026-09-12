@@ -26,7 +26,7 @@
 #living-pan::-webkit-scrollbar{display:none}#living-pan canvas{display:block;max-width:none;touch-action:pan-x}
 body:not(.living-ready) #living-pan{display:none}body.living-ready[data-state=welcome] #world,body.living-ready[data-state=portals] #world{visibility:hidden}
 body:not([data-state=welcome]):not([data-state=portals]) #living-pan,body:not([data-state=welcome]):not([data-state=portals])>.portal-links{visibility:hidden;pointer-events:none}
-body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not([data-state=welcome]):not([data-state=portals]) #garden-tools,body:not([data-state=welcome]):not([data-state=portals]) #garden-menu,body:not([data-state=welcome]):not([data-state=portals]) #garden-toast,body:not([data-state=welcome]):not([data-state=portals]) #garden-hint{display:none!important}
+body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not([data-state=welcome]):not([data-state=portals]) #garden-tools,body:not([data-state=welcome]):not([data-state=portals]) #garden-menu,body:not([data-state=welcome]):not([data-state=portals]) #garden-toast,body:not([data-state=welcome]):not([data-state=portals]) #garden-hint,body:not([data-state=welcome]):not([data-state=portals]) #party-overlay,body:not([data-state=welcome]):not([data-state=portals]) #party-player{display:none!important}
 .masthead{color:#075369;text-shadow:0 1px 12px #cefff3;pointer-events:none}.brand{pointer-events:auto}.brand-mark{background:#cffff380}.edition{opacity:1;font-weight:600}
 .welcome{inset:auto;top:17vh;left:50%;transform:translateX(-50%);width:min(530px,46vw);padding:25px 16px 24px;border:1px solid #d6fff39c;border-radius:42% 42% 26px 26px / 24% 24% 26px 26px;background:linear-gradient(160deg,#e7fff0db,#c9f9efa8);box-shadow:0 18px 70px #00849a17;backdrop-filter:blur(5px)}
 .welcome .eyebrow{font-size:8px;letter-spacing:.14em;margin:8px 0 18px;color:#087284}.welcome h1{font-size:clamp(37px,3.6vw,58px);letter-spacing:-.055em}.welcome h1 em{font-size:.5em;margin-top:10px}.welcome .message{font-size:21px;margin:19px 0 15px;color:#066273}
@@ -48,3 +48,23 @@ body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not(
 @media(max-width:700px){#garden-pan-controls{position:fixed;inset:48% 7px auto;z-index:5;display:flex;justify-content:space-between;pointer-events:none}#garden-pan-controls button{pointer-events:auto;width:30px;height:40px;background:#defff0d9;border:1px solid #eafff5;border-radius:16px;color:#075369;font-size:18px}}
 #living-pan canvas{filter:saturate(1.28) brightness(1.06)}
 @media(max-height:500px) and (max-width:900px){.welcome{top:42px;width:310px;max-width:calc(100vw - 80px);padding:10px 14px;border-radius:26px}.welcome .eyebrow{display:none}.welcome h1{font-size:27px}.welcome h1 em{font-size:16px;margin-top:5px}.welcome .message{font-size:15px;margin:7px 0}.welcome .primary{font-size:10px;padding:9px 14px}.portal-links{height:85px;bottom:49px;width:min(480px,calc(100vw - 80px));grid-template-columns:repeat(4,1fr);grid-template-rows:1fr;gap:7px}.portal-links a{padding:9px 7px}.portal-name{font-size:13px}.portal-note{font-size:7px}.portal-heading{top:65px;padding:15px}.portal-heading h2{font-size:28px}.portal-heading .eyebrow{margin-bottom:7px}.replay{top:185px;bottom:auto;font-size:9px;padding:7px 12px}#garden-hint{display:none}#garden-tools{bottom:7px}.garden-pill{padding:7px 10px}.masthead{top:10px}}
+
+/* Party mode: ten seconds of nightclub, then back to the garden. The overlay
+   sits above everything (masthead, cards, garden pills) so "the page goes
+   darker" reads literally; the characters' own jump animation lives in
+   living-home.js/garden-people.js and needs no CSS. */
+#party-overlay{position:fixed;inset:0;z-index:1000;pointer-events:none;opacity:0;transition:opacity .5s ease}
+body.party-mode #party-overlay{opacity:1}
+.party-scrim{position:absolute;inset:0;background:radial-gradient(circle at 50% 35%,rgba(20,4,36,.45),rgba(2,0,10,.82))}
+.party-laser{position:absolute;left:50%;bottom:-5%;width:5px;height:135vmax;background:linear-gradient(to top,rgba(255,255,255,.85),rgba(255,255,255,0) 68%);transform-origin:bottom center;mix-blend-mode:screen;display:none}
+body.party-mode .party-laser{display:block;animation:party-sweep 2.4s ease-in-out infinite alternate,party-hue 5s linear infinite}
+.party-laser.l2{left:36%;animation-duration:2.1s,5s;animation-delay:.25s,.4s}
+.party-laser.l3{left:64%;animation-duration:2.7s,5s;animation-delay:.5s,.9s}
+.party-laser.l4{left:50%;bottom:auto;top:-5%;transform-origin:top center;animation-duration:1.9s,5s;animation-delay:.15s,1.4s}
+@keyframes party-sweep{from{transform:translateX(-50%) rotate(-34deg)}to{transform:translateX(-50%) rotate(34deg)}}
+@keyframes party-hue{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+.party-glow{position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,90,190,.4),transparent 62%);opacity:0;display:none}
+body.party-mode .party-glow{display:block;animation:party-pulse 1.15s ease-in-out infinite}
+@keyframes party-pulse{0%,100%{opacity:0}50%{opacity:.6}}
+#party-player{position:fixed;right:16px;bottom:16px;z-index:1001;width:280px;max-width:calc(100vw - 32px);border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+@media(prefers-reduced-motion:reduce){body.party-mode .party-laser{animation:none;opacity:.4}body.party-mode .party-glow{display:block;animation:none;opacity:.25}}

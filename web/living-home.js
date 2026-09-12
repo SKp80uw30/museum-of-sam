@@ -10,6 +10,8 @@ export function createLivingHome({container,onMessage,reducedMotion=false}) {
  scene.add(new THREE.HemisphereLight('#e6ffff','#188c72',.85));const sun=new THREE.DirectionalLight('#fff3d0',2.0);sun.position.set(-18,35,18);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-30,right:30,top:26,bottom:-24,near:1,far:90});sun.shadow.normalBias=.05;scene.add(sun)
  const fill=new THREE.DirectionalLight('#83caff',.5);fill.position.set(20,10,-20);scene.add(fill)
  let clock=0,active=true,quiet=reducedMotion,width=0,height=0,pan=0,seed=258,motionPaused=false
+ const partyState={active:false}
+ const sunColor=sun.color.clone(),fillColor=fill.color.clone()
  const callbacks=[],hits=[],hotspots=[],bursts=[],buckets=new Map(),materials=new Map(),wind={value:0}
  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
  const sphere=new THREE.SphereGeometry(1,16,12),boxGeo=new THREE.BoxGeometry(1,1,1),cylinder=new THREE.CylinderGeometry(1,1,1,12),cone=new THREE.ConeGeometry(1,1,12)
@@ -60,7 +62,7 @@ export function createLivingHome({container,onMessage,reducedMotion=false}) {
  if(crest)for(let i=0;i<4;i++){const o=ball(head,'#ffe568',[(i-1.5)*.06,.3+i*.035,-.05],[.055,.24,.065]);o.rotation.x=-.4}
  const wings=[-1,1].map(s=>{const p=group(g,[s*.3,.43,0]);ball(p,wingColor,[s*.12,-.1,0],[.17,.37,.28]);return p});const tail=ball(g,wingColor,[0,-.03,-.38],[.17,.12,.45]);for(const s of [-1,1])rod(g,[s*.12,-.08,0],[s*.14,-.25,.08],.025,'#c89d61');let flyUntil=0
  surprise(name,name,g,()=>{flyUntil=clock+4;burst(g.position.clone().add(new THREE.Vector3(0,1,0)).toArray(),'#ffe881',12);onMessage(`${name} has a birthday song for Sam. You’re everybody’s favourite perch.`);chirp()})
- callbacks.push(t=>{const flight=t<flyUntil;g.position.y=y+(flight?Math.sin((flyUntil-t)/4*Math.PI)*2:Math.sin(t*1.6+x)*.045);head.rotation.z=Math.sin(t*.9+x)*.12;wings.forEach((w,i)=>w.rotation.z=(i?1:-1)*(flight?Math.sin(t*18)*.9:.06*Math.sin(t*2)));tail.rotation.x=Math.sin(t*1.8)*.05});return g}
+ callbacks.push(t=>{const clicked=t<flyUntil,flight=clicked||partyState.active;g.position.y=y+(clicked?Math.sin((flyUntil-t)/4*Math.PI)*2:partyState.active?Math.abs(Math.sin(t*8+x))*1.4:Math.sin(t*1.6+x)*.045);head.rotation.z=Math.sin(t*.9+x)*.12;wings.forEach((w,i)=>w.rotation.z=(i?1:-1)*(flight?Math.sin(t*18)*.9:.06*Math.sin(t*2)));tail.rotation.x=Math.sin(t*1.8)*.05});return g}
  bird('Cockatoo',-13,4.6,-1,'#fffde6','#f2ead0',true);bird('Rainbow lorikeet',12,4.2,0,'#3d82ef','#17b981');bird('Kookaburra',-19,2.1,6,'#f7dfb4','#805b40');bird('Kingfisher',18,2.4,5,'#16bfe0','#087eaa');bird('Seagull',-13,.9,10,'#f7ffff','#9ebec6')
  rod(scene,[-15,3.9,-1],[-11,3.9,-1],.09,'#388974');rod(scene,[10,3.5,0],[14,3.5,0],.09,'#388974')
  // Honey: a cream-and-caramel cockalier, floppy ears and a very busy tail.
@@ -68,8 +70,8 @@ export function createLivingHome({container,onMessage,reducedMotion=false}) {
  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,o=ball(honey,i%3===0?'#c5ed5c':'#ff82b9',[Math.cos(a)*.58,.65,-.22+Math.sin(a)*.45],[.28,.08,.37]);o.rotation.y=-a;o.rotation.z=Math.cos(a)*.25}
  textSign('Honey with tutu',[-9,2.65,8],3.1)
  surprise('honey',`${birthdayName(HONEY_FILE)}: Happy Birthday Sammy`,honey,()=>{dogUntil=clock+5;burst([-9,1.7,8],'#ff79ab',24);onMessage(birthdayGreeting(HONEY_FILE));softNotes([392,494,587])})
- callbacks.push(t=>{tail.rotation.y=Math.sin(t*(dogUntil>t?15:5))*(dogUntil>t?.7:.28);dogHead.rotation.z=Math.sin(t*.8)*.09;ears.forEach((e,i)=>e.rotation.z=Math.sin(t*2+i)*.06);honey.position.y=.4+(dogUntil>t?Math.abs(Math.sin(t*6))*.25:0)})
- addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime:()=>clock})
+ callbacks.push(t=>{const excited=dogUntil>t||partyState.active;tail.rotation.y=Math.sin(t*(excited?15:5))*(excited?.7:.28);dogHead.rotation.z=Math.sin(t*.8)*.09;ears.forEach((e,i)=>e.rotation.z=Math.sin(t*2+i)*.06);honey.position.y=.4+(partyState.active?Math.abs(Math.sin(t*7))*.4:dogUntil>t?Math.abs(Math.sin(t*6))*.25:0)})
+ addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime:()=>clock,partyState})
  mesh(scene,boxGeo,'#e5d9a2',[11,.32,6],[3.9,.16,.9]);for(const x of [9.5,12.5])rod(scene,[x,0,6],[x,.3,6],.09,'#087f87')
  // Love for the whole world: a small garden globe that blooms with connection.
  const globe=group(scene,[-15,1.2,3]);ball(globe,'#24a5d1',[0,.4,0],[.78,.78,.78]);for(let i=0;i<8;i++){const a=i*2.4;ball(globe,'#a2e47b',[Math.cos(a)*.63,.4+Math.sin(i)*.38,Math.sin(a)*.63],[.25,.18,.13])}const globeStand=mesh(scene,cylinder,'#087d91',[-15,.35,3],[.3,.7,.3]);let globeUntil=0;surprise('world','Send the world some love',globe,()=>{globeUntil=clock+5;burst([-15,2.1,3],'#ffe67e',28);onMessage('A little kindness travels a long way. You make this world a lovelier place, Sam.');softNotes([262,330,392,523])});callbacks.push(t=>{globe.rotation.y=t*(t<globeUntil?.8:.08)})
@@ -86,9 +88,16 @@ export function createLivingHome({container,onMessage,reducedMotion=false}) {
  renderer.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY,container.scrollLeft]})
  renderer.domElement.addEventListener('pointerup',e=>{if(!active||!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8||Math.abs(container.scrollLeft-down[2])>8)return;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const hit=ray.intersectObjects(hits,false)[0];if(hit)trigger(hit.object.userData.surprise)})
  function trigger(id){const h=hotspots.find(h=>h.id===id);if(h){h.run();draw(0);return true}return false}
+ // Ten seconds of nightclub takeover: coloured lights (draw()) and every character
+ // jumping (their own callbacks, gated on partyState.active) already react on their
+ // own — this just flips the switch and flips it back.
+ let partyTimer=null
+ function party(){if(partyState.active)return false;partyState.active=true;clearTimeout(partyTimer);partyTimer=setTimeout(()=>{partyState.active=false},10000);return true}
  function resize(center=false){const mobile=innerWidth<=700;const previous=center?.5:width>innerWidth?(container.scrollLeft/(width-innerWidth)):.5;width=mobile?Math.max(1200,innerWidth*2.8):innerWidth;height=innerHeight;renderer.setSize(width,height);camera.left=-26;camera.right=26;camera.top=26*height/width;camera.bottom=-camera.top;camera.updateProjectionMatrix();container.scrollLeft=mobile?(width-innerWidth)*previous:0;draw(0)}
- function draw(dt){if(!active||((quiet||motionPaused)&&dt>0))return;if(!quiet&&!motionPaused)clock+=dt;wind.value=quiet||motionPaused?0:clock;for(const fn of callbacks)fn(quiet?0:clock);for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];if(!quiet&&!motionPaused){b.life-=dt;b.v.y-=dt*1.2;b.o.position.addScaledVector(b.v,dt);b.o.scale.setScalar(.08*Math.max(0,b.life/1.7))}if(b.life<=0||quiet){scene.remove(b.o);bursts.splice(i,1)}}renderer.render(scene,camera)}
+ function draw(dt){if(!active||((quiet||motionPaused)&&dt>0))return;if(!quiet&&!motionPaused)clock+=dt;wind.value=quiet||motionPaused?0:clock
+ if(partyState.active&&!quiet){const hue=(clock*.6)%1;sun.color.setHSL(hue,.85,.6);fill.color.setHSL((hue+.5)%1,.85,.6)}else{sun.color.copy(sunColor);fill.color.copy(fillColor)}
+ for(const fn of callbacks)fn(quiet?0:clock);for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];if(!quiet&&!motionPaused){b.life-=dt;b.v.y-=dt*1.2;b.o.position.addScaledVector(b.v,dt);b.o.scale.setScalar(.08*Math.max(0,b.life/1.7))}if(b.life<=0||quiet){scene.remove(b.o);bursts.splice(i,1)}}renderer.render(scene,camera)}
  renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();onMessage('The garden is taking a breather. Your birthday journey and all four portals are still here.')})
  resize()
- return {draw,resize,trigger,hotspots:hotspots.map(({id,label})=>({id,label})),setActive(v){active=v},setReduced(v){quiet=v;draw(0)},setPaused(v){motionPaused=v;draw(0)},snapshot(){draw(0);return {canvas:renderer.domElement,left:container.scrollLeft*(renderer.domElement.width/width),width:innerWidth*(renderer.domElement.width/width)}},stats(){return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,hotspots:hotspots.length}},dispose(){renderer.dispose()}}
+ return {draw,resize,trigger,party,hotspots:hotspots.map(({id,label})=>({id,label})),setActive(v){active=v},setReduced(v){quiet=v;draw(0)},setPaused(v){motionPaused=v;draw(0)},snapshot(){draw(0);return {canvas:renderer.domElement,left:container.scrollLeft*(renderer.domElement.width/width),width:innerWidth*(renderer.domElement.width/width)}},stats(){return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,hotspots:hotspots.length}},dispose(){renderer.dispose()}}
 }

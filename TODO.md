@@ -429,3 +429,52 @@ The browser access limit noted for the earlier homepage pass is no longer blocki
       via `window.__debug.hotspots` that Liam/Nancy/Orla/Kieran appear in forest, castle and gallery_home
       hotspot lists and J-Don (not Jay) appears in reef, castle and gallery_home; triggered the Liam hotspot
       in forest end-to-end (open animation + confetti + toast + HUD increment to 1/15) with no errors.
+
+### Homepage "Party" button — 2026-09-12
+- [x] Added a `🎉 Party` pill to `#garden-tools` in `web/home.html` (visible only in the `welcome`/`portals`
+      states, same existing CSS gating rule as the other garden pills). Clicking it: darkens the whole page
+      and sweeps 4 colour-cycling CSS laser beams plus a pulsing glow over everything via a new fixed,
+      `pointer-events:none` `#party-overlay` (z-index above the masthead/cards/toast); makes every homepage
+      character jump (people, Honey, and the birds) for 10 seconds; and plays a randomly chosen nominated
+      song from Spotify. Reverts everything automatically after 10s; a `partyActive` flag (`home.js`) plus
+      `living.party()`'s own re-entrancy guard (`living-home.js`) stop a second click from double-firing or
+      restarting the 10s window.
+- [x] New `tools/prepare_party_songs.py` parses `characters/messages.txt` (gitignored, holds each character's
+      optional Birthday Message / Spotify Song Link / Surprise Message — private planning fields, only
+      Spotify links are used by anything today) and writes `web/party-songs.json` (character + track id for
+      every non-empty Spotify link) — re-run it any time someone nominates a new song. Currently just Steve's
+      nomination. `home.js`'s `startParty()` fetches that JSON, picks one at random, lazy-loads Spotify's
+      official iFrame API (`open.spotify.com/embed/iframe-api/v1`, only ever loaded once), and mounts a
+      compact player into a fixed bottom-right `#party-player` widget, calling `.play()` on its `ready` event
+      (playback is still gated by the browser's own autoplay policy — the widget stays visible so a listener
+      can hit play by hand if autoplay is blocked) and `.pause()`/`.destroy()` when the 10s window ends. If no
+      songs are nominated yet, the lights/jumping still run and the toast says so instead.
+- [x] The jump itself lives entirely in the existing per-frame character callbacks: `garden-people.js`'s
+      `addGardenPeople()` now takes a shared mutable `partyState` object (also read directly by Honey's and
+      the birds' callbacks, which are defined in `living-home.js`'s own closure) and reads
+      `partyState.active` every frame to swap the normal idle bob/wave for a phase-offset-by-`x` jump (so the
+      crowd doesn't bounce in unison) with both arms thrown up; `living.party()` flips that flag on and off.
+      `living-home.js`'s `draw()` also cycles the sun/fill light colours through HSL while partying (skipped
+      when `quiet`/reduced-motion) so the 3D scene itself reads as lit up, not just the CSS overlay on top of
+      it.
+- [x] Respects `prefers-reduced-motion`: the laser-sweep/hue and glow-pulse CSS animations are disabled (a
+      static dim tint remains) under that media query, matching how the rest of this homepage already treats
+      reduced motion; the strobe/pulse rate (~1.1s) is well under the WCAG general-flash threshold regardless.
+- [x] Bumped cache-busting: `home.css?v=6→7`, `home.js?v=characters2→party1` (in `home.html`), the
+      `living-home.js?v=` import inside `home.js` (`characters2→party1`), and the service-worker `CACHE_NAME`
+      in `web/sw.js` (`v6-characters→v7-party`).
+- [x] Verified: `node --check` on all touched JS, `node tools/check_birthday_home.mjs` regression pass, and a
+      live browser pass (after clearing a stale service-worker registration/cache left over from earlier
+      testing in this same browser profile — a reminder to hard-reload past any old SW when re-testing this
+      site locally). Confirmed zero console errors through a full 10s cycle; `body.party-mode`
+      toggles correctly and always ends up off with the button re-enabled after 10s; a rapid double-click
+      only starts one cycle; a screenshot taken at trigger time shows the darkened page, sweeping coloured
+      lasers, and the real Spotify widget playing Steve's actual nominated track ("This Too Shall Pass");
+      after the cycle, `#party-player` is empty and hidden again with no leaked DOM nodes.
+      **Not verified**: the actual jump motion frame-to-frame — this MCP-driven tab reports `document.hidden
+      === true` (it isn't the focused/foreground tab), and `home.js`'s existing `frame()` loop already
+      gates all garden animation on `!document.hidden` (pre-existing, not something this change added), so
+      no garden animation — old or new — advances in this specific automated context. The animation code
+      path was reviewed directly instead: it's the same `t<until?raisedPose:restPose`-style branch already
+      proven working for the wave/bob/dance reactions elsewhere in this file. Worth confirming visually in a
+      real, focused browser tab.

@@ -8,7 +8,7 @@
 <title>Happy Birthday, Sam — Museum of Sam</title>
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="manifest" href="./manifest.json">
-<link rel="stylesheet" href="./home.css?v=6">
+<link rel="stylesheet" href="./home.css?v=7">
 </head>
 <body data-state="welcome">
 <div id="living-pan" tabindex="0" role="region" aria-label="Sam’s living coastal garden. On mobile, swipe left or right to explore the scenery."></div>
@@ -56,7 +56,17 @@
   <button id="garden-discover" class="garden-pill" aria-expanded="false" aria-controls="garden-menu">✧ Little surprises</button>
   <button id="garden-motion" class="garden-pill" aria-pressed="false">Pause garden</button>
   <label class="garden-pill sound-choice"><input id="garden-sound" type="checkbox"> Sound</label>
+  <button id="garden-party" class="garden-pill">🎉 Party</button>
 </aside>
+<div id="party-overlay" aria-hidden="true">
+  <div class="party-scrim"></div>
+  <div class="party-laser l1"></div>
+  <div class="party-laser l2"></div>
+  <div class="party-laser l3"></div>
+  <div class="party-laser l4"></div>
+  <div class="party-glow"></div>
+</div>
+<div id="party-player" hidden></div>
 <div id="garden-menu" hidden><p>Little things Sam loves</p><div id="garden-actions"></div></div>
 <div id="garden-toast" role="status" aria-live="polite" hidden><span></span><button aria-label="Dismiss message">×</button></div>
 <div id="garden-pan-controls"><button aria-label="Explore garden to the left">←</button><button aria-label="Explore garden to the right">→</button></div>
@@ -65,6 +75,6 @@
 <footer id="footer"><span>A LITTLE MORE LOVE IN THE WORLD</span><span>WITH ALL OUR LOVE ♡</span></footer>
 <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
 <noscript><div class="no-script">Happy Birthday Mum / Sam / Fiz / Samty. We love you this much!<br><a href="./index.html?scene=reef">Underwater Reef</a> · <a href="./index.html?scene=forest">Forest Walkway</a> · <a href="./index.html?scene=jumping_castle">Jumping Castle</a> · <a href="./index.html?scene=gallery_home">Gallery Home</a><p>Enable JavaScript to enjoy your birthday journey and explore the museum.</p></div></noscript>
-<script type="module" src="./home.js?v=characters2"></script>
+<script type="module" src="./home.js?v=party1"></script>
 </body>
 </html>
