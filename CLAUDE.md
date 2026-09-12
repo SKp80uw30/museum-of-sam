@@ -104,6 +104,28 @@ images demand.
   the top level, so a pre-existing `us-photos/` subfolder had silently
   never been included until then.)
 
+## Deployment
+
+Two independent, live deployments exist — pushing code does **not**
+automatically update both:
+
+- **Netlify — https://museum-of-sam.netlify.app/** (added 2026-09-13). Netlify
+  is connected directly to this GitHub repo (`SKp80uw30/museum-of-sam`) and
+  auto-builds/publishes on every push to `main` — no manual deploy step,
+  `git push origin main` is enough. This is the primary link to hand out for
+  testing/sharing.
+- **freedaiy Tailscale Funnel — https://freedaiy.tail25e0dd.ts.net:8443/**
+  (added 2026-09-11, see the global CLAUDE.md's "Remote Linux Box" section
+  for what `freedaiy` is). This one is **not** wired to git at all — it
+  serves a separate rsynced copy on that box, so it only picks up changes
+  after manually running `tools/deploy_to_freedaiy.sh` from the repo root.
+  Forgetting this step is the most likely way the two deployments drift out
+  of sync with each other.
+
+Both serve the same `web/` (+ `exports/`) content; there's no per-deployment
+code branching. When asked to "push so it's live" without more context,
+confirm which of the two (or both) the user means.
+
 ## Working conventions
 
 - Keep the reusable hallway as its own `.blend` file (undressed/plain) so it
