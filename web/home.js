@@ -115,7 +115,9 @@ if(typeof WebGLRenderingContext!=='undefined'){
   const actions=document.querySelector('#garden-actions')
   living.hotspots.forEach(({id,label})=>{const button=document.createElement('button');button.textContent=label;button.dataset.surprise=id;button.addEventListener('click',()=>living.trigger(id));actions.append(button)})
   console.info('Living garden ready:',JSON.stringify(living.stats()))
- }).catch(error=>{console.error('Living garden could not start',error);gardenMessage('The garden couldn’t open on this device. Your birthday journey and the four worlds are still ready.')})
+ }).catch(error=>{console.error('Living garden could not start',error);document.body.classList.add('garden-unavailable');gardenMessage('The garden couldn’t open on this device. Your birthday journey and the four worlds are still ready.')})
+}else{
+ document.body.classList.add('garden-unavailable')
 }
 document.querySelector('#garden-discover').addEventListener('click',()=>{const menu=document.querySelector('#garden-menu'),button=document.querySelector('#garden-discover');menu.hidden=!menu.hidden;button.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)menu.querySelector('button')?.focus()})
 document.querySelector('#garden-motion').addEventListener('click',()=>{gardenPaused=!gardenPaused;living?.setPaused(gardenPaused);const button=document.querySelector('#garden-motion');button.setAttribute('aria-pressed',String(gardenPaused));button.textContent=gardenPaused?'Let it live':'Pause garden'})

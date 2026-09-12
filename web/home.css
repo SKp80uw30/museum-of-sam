@@ -24,7 +24,7 @@
 :root{--ink:#075369;--cream:#edffef;--gold:#087f94}body{background:#79e3df;color:var(--ink)}
 #living-pan{position:fixed;inset:0;z-index:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:none;background:linear-gradient(#8de6ed,#05b8b9);outline-offset:-4px}
 #living-pan::-webkit-scrollbar{display:none}#living-pan canvas{display:block;max-width:none;touch-action:pan-x}
-body:not(.living-ready) #living-pan{display:none}body.living-ready[data-state=welcome] #world,body.living-ready[data-state=portals] #world{visibility:hidden}
+body:not(.living-ready) #living-pan{display:none}body[data-state=welcome] #world,body[data-state=portals] #world{visibility:hidden}body.garden-unavailable[data-state=welcome] #world,body.garden-unavailable[data-state=portals] #world{visibility:visible}
 body:not([data-state=welcome]):not([data-state=portals]) #living-pan,body:not([data-state=welcome]):not([data-state=portals])>.portal-links{visibility:hidden;pointer-events:none}
 body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not([data-state=welcome]):not([data-state=portals]) #garden-tools,body:not([data-state=welcome]):not([data-state=portals]) #garden-menu,body:not([data-state=welcome]):not([data-state=portals]) #garden-toast,body:not([data-state=welcome]):not([data-state=portals]) #garden-hint,body:not([data-state=welcome]):not([data-state=portals]) #party-overlay,body:not([data-state=welcome]):not([data-state=portals]) #party-player{display:none!important}
 .masthead{color:#075369;text-shadow:0 1px 12px #cefff3;pointer-events:none}.brand{pointer-events:auto}.brand-mark{background:#cffff380}.edition{opacity:1;font-weight:600}
