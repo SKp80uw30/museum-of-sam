@@ -7,7 +7,7 @@
 // new photos) and CLAUDE.md already documents cache-busting query strings
 // on the JS modules; adding a second caching layer on top of that would
 // just reintroduce the staleness problem it was designed to avoid.
-const CACHE_NAME = 'museum-of-sam-shell-v8-new-cast'
+const CACHE_NAME = 'museum-of-sam-shell-v9-party-letters'
 const SHELL_URLS = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const SHELL_URLS = [
   './living-home.js',
   './garden-people.js',
   './garden-characters.mjs',
+  './party-letters.js',
   './forest-sky.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -55,7 +56,7 @@ self.addEventListener('fetch', (event) => {
   // broke a freshly-deployed feature from ever appearing until a manual
   // cache clear). Go to the network first always; only fall back to
   // whatever's cached if the network is unreachable (offline PWA use).
-  const isHtmlShell = url.pathname === '/' || url.pathname.endsWith('/index.html') || /\/(?:home(?:-journey)?|living-home|garden-people|garden-characters)\.(?:html|css|js|mjs)$/.test(url.pathname)
+  const isHtmlShell = url.pathname === '/' || url.pathname.endsWith('/index.html') || /\/(?:home(?:-journey)?|living-home|garden-people|garden-characters|party-letters)\.(?:html|css|js|mjs)$/.test(url.pathname)
   if (isHtmlShell) {
     event.respondWith(
       fetch(event.request).then((response) => {

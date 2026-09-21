@@ -26,7 +26,7 @@
 #living-pan::-webkit-scrollbar{display:none}#living-pan canvas{display:block;max-width:none;touch-action:pan-x}
 body:not(.living-ready) #living-pan{display:none}body[data-state=welcome] #world,body[data-state=portals] #world{visibility:hidden}body.garden-unavailable[data-state=welcome] #world,body.garden-unavailable[data-state=portals] #world{visibility:visible}
 body:not([data-state=welcome]):not([data-state=portals]) #living-pan,body:not([data-state=welcome]):not([data-state=portals])>.portal-links{visibility:hidden;pointer-events:none}
-body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not([data-state=welcome]):not([data-state=portals]) #garden-tools,body:not([data-state=welcome]):not([data-state=portals]) #garden-menu,body:not([data-state=welcome]):not([data-state=portals]) #garden-toast,body:not([data-state=welcome]):not([data-state=portals]) #garden-hint,body:not([data-state=welcome]):not([data-state=portals]) #garden-scrim,body:not([data-state=welcome]):not([data-state=portals]) #party-overlay,body:not([data-state=welcome]):not([data-state=portals]) #party-player{display:none!important}
+body:not([data-state=welcome]):not([data-state=portals]) .portal-links,body:not([data-state=welcome]):not([data-state=portals]) #garden-tools,body:not([data-state=welcome]):not([data-state=portals]) #garden-menu,body:not([data-state=welcome]):not([data-state=portals]) #garden-toast,body:not([data-state=welcome]):not([data-state=portals]) #garden-hint,body:not([data-state=welcome]):not([data-state=portals]) #garden-scrim,body:not([data-state=welcome]):not([data-state=portals]) #party-overlay,body:not([data-state=welcome]):not([data-state=portals]) #party-player,body:not([data-state=welcome]):not([data-state=portals]) #party-game,body:not([data-state=welcome]):not([data-state=portals]) #party-toggle,body:not([data-state=welcome]):not([data-state=portals]) #party-video{display:none!important}
 .masthead{color:#075369;text-shadow:0 1px 12px #cefff3;pointer-events:none}.brand{pointer-events:auto}.brand-mark{background:#cffff380}.edition{opacity:1;font-weight:600}
 .welcome{inset:auto;top:17vh;left:50%;transform:translateX(-50%);width:min(530px,46vw);padding:25px 16px 24px;border:1px solid #d6fff39c;border-radius:42% 42% 26px 26px / 24% 24% 26px 26px;background:linear-gradient(160deg,#e7fff0db,#c9f9efa8);box-shadow:0 18px 70px #00849a17;backdrop-filter:blur(5px)}
 .welcome .eyebrow{font-size:8px;letter-spacing:.14em;margin:8px 0 18px;color:#087284}.welcome h1{font-size:clamp(37px,3.6vw,58px);letter-spacing:-.055em}.welcome h1 em{font-size:.5em;margin-top:10px}.welcome .message{font-size:21px;margin:19px 0 15px;color:#066273}
@@ -87,3 +87,76 @@ body.party-mode .party-glow{display:block;animation:party-pulse 1.15s ease-in-ou
 #garden-toast{left:16px;right:16px;top:calc(env(safe-area-inset-top) + 54px);bottom:auto;width:auto;max-width:none;padding:16px 42px 16px 16px}
 #garden-toast button{top:10px;right:10px}
 }
+
+/* The PARTY letter puzzle (party-letters.js). Five tiles scatter down the
+   left and right margins — the only parts of the desktop garden not already
+   claimed by the welcome card, the four doors or the garden pills — and drop
+   into five boxes stacked in the bottom-right corner, with the video panel
+   riding directly above them. On phones there is no free margin to scatter
+   into, so the whole thing collapses behind a pill (#party-toggle) and opens
+   as one compact two-row bar above the garden tools. */
+#party-game{position:fixed;inset:0;z-index:6;pointer-events:none}
+#party-game[hidden]{display:none}
+#party-letters{position:absolute;inset:0}
+.party-letter{position:absolute;left:var(--x);top:var(--y);pointer-events:auto;touch-action:none;width:58px;height:58px;display:grid;place-items:center;font:700 26px/1 Georgia,serif;color:#06556b;background:linear-gradient(160deg,#fffdf0,#ffeeb0);border:2px solid #fff;border-radius:16px;box-shadow:0 8px 22px #02557840;transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--tilt,-3deg));transition:box-shadow .2s,background .2s}
+.party-letter:nth-child(2n){--tilt:4deg}.party-letter:nth-child(3n){--tilt:-6deg}
+.party-letter:hover{background:linear-gradient(160deg,#fffef8,#fff6b6);box-shadow:0 12px 26px #0255784d}
+.party-letter.picked{background:linear-gradient(160deg,#fff,#b6ffe4);box-shadow:0 0 0 3px #4fd6b0,0 12px 26px #02557855}
+.party-letter.dragging{pointer-events:none;z-index:20;transition:none;transform:translate(var(--dx,0),var(--dy,0)) rotate(0deg) scale(1.12)}
+.party-letter:focus-visible{outline:2px solid #046987;outline-offset:4px}
+#party-slots-wrap{position:absolute;right:22px;bottom:24px;pointer-events:auto;text-align:right}
+#party-caption{margin:0 0 8px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#065766;background:#ddfff2c9;display:inline-block;padding:5px 11px;border-radius:14px}
+#party-caption b{color:#036b81;letter-spacing:.24em}
+#party-slots{display:flex;gap:9px}
+.party-slot{position:relative;width:58px;height:58px;padding:0;border:2px dashed #7fd9d3;border-radius:16px;background:#e8fffaad;box-shadow:inset 0 2px 10px #04566a14;transition:border-color .25s,background .25s,transform .25s}
+#party-game.picking .party-slot:not(.filled){border-color:#f0c75e;background:#fffbe4d9;animation:party-slot-wait 1.3s ease-in-out infinite}
+@keyframes party-slot-wait{0%,100%{box-shadow:inset 0 2px 10px #04566a14}50%{box-shadow:inset 0 2px 10px #04566a14,0 0 0 7px #f0c75e3d}}
+.party-slot.filled{border:2px solid #2fa46a;background:#d7ffe6;box-shadow:0 0 0 3px #2fa46a33,0 6px 18px #05604033}
+.party-slot.wrong{animation:party-slot-no .6s ease}
+@keyframes party-slot-no{0%,100%{transform:none}20%{transform:translateX(-7px)}45%{transform:translateX(7px)}70%{transform:translateX(-4px)}}
+.party-slot .party-letter{position:static;width:100%;height:100%;border:0;border-radius:14px;background:linear-gradient(160deg,#f2fff6,#a9f3c6);color:#0a5c3c;box-shadow:none;transform:none;animation:party-letter-land .45s cubic-bezier(.2,1.5,.5,1)}
+@keyframes party-letter-land{from{transform:scale(1.5) rotate(-12deg);opacity:.4}to{transform:none;opacity:1}}
+#party-slots.complete{animation:party-slot-cheer .8s ease}
+@keyframes party-slot-cheer{0%,100%{transform:none}30%{transform:translateY(-10px) rotate(-2deg)}60%{transform:translateY(-4px)}}
+.party-slot:focus-visible{outline:2px solid #046987;outline-offset:4px}
+#party-toggle{display:none}
+
+/* The video: bottom-right quarter by default, sitting on top of the boxes,
+   expandable to nearly the full viewport. Its z-index stays under
+   #party-overlay (1000) so the finale's lasers sweep over the picture rather
+   than behind it. */
+#party-video{position:fixed;z-index:6;right:22px;bottom:118px;width:min(44vw,600px);border-radius:18px;overflow:hidden;background:#04222b;border:2px solid #d7fff0;box-shadow:0 16px 46px #01384a66}
+#party-video[hidden]{display:none}
+#party-video.expanded{inset:6vh 6vw 15vh;width:auto;z-index:999}
+#party-video-bar{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 13px;background:#065a6e;color:#ddfff4;font-size:9px;letter-spacing:.2em}
+#party-video-bar>span:first-child{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-btn{border:1px solid #6fd3d5;background:#0a7286;color:#eafffa;border-radius:12px;padding:5px 9px;font-size:11px;line-height:1}
+.pv-btn:hover{background:#0ea0b4}.pv-btn[hidden]{display:none}
+.pv-btn:focus-visible{outline:2px solid #ffe9a5;outline-offset:2px}
+#party-video-el{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000}
+#party-video.expanded #party-video-el{height:calc(100% - 34px);aspect-ratio:auto;object-fit:contain}
+/* The toast normally lives exactly where the video does — move it out of the way. */
+body.party-video-open #garden-toast{bottom:auto;top:calc(env(safe-area-inset-top) + 74px)}
+
+@media(max-width:700px){
+#party-toggle{display:grid;place-items:center;position:fixed;z-index:6;right:10px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 100px);width:44px;height:44px;padding:0;border-radius:50%;font-size:17px;overflow:hidden;text-indent:-99em}
+#party-toggle::after{content:"🅿️";text-indent:0;position:absolute}
+body.party-open #party-toggle{background:#fff6b6;border-color:#f0c75e}
+#party-game{display:none}
+body.party-open #party-game{display:block}
+/* One stack, bottom up: garden pills, boxes (with their caption), loose
+   letters, then the player. The swipe hint and the replay link step aside
+   while the puzzle is open rather than being stacked on top of. */
+#party-letters{position:absolute;inset:auto 10px calc(max(16px,env(safe-area-inset-bottom)) + 122px) 10px;display:flex;justify-content:center;gap:7px;min-height:46px}
+.party-letter{position:static;width:46px;height:46px;font-size:21px;border-radius:13px}
+.party-letter.dragging{position:fixed}
+#party-slots-wrap{right:10px;left:10px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 46px);text-align:center}
+#party-caption{font-size:8px;margin-bottom:6px}
+#party-slots{justify-content:center;gap:6px}
+.party-slot{width:46px;height:46px;border-radius:13px}
+#party-video{right:10px;left:10px;width:auto;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 46px)}
+body.party-open #party-video{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 178px)}
+#party-video.expanded{inset:4vh 4vw;width:auto}
+body.party-open #garden-hint,body.party-video-open #garden-hint,body.party-open .replay{display:none}
+}
+@media(prefers-reduced-motion:reduce){#party-game.picking .party-slot:not(.filled),.party-slot .party-letter,#party-slots.complete,.party-slot.wrong{animation:none}}

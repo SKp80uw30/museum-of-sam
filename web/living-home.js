@@ -88,11 +88,12 @@ export function createLivingHome({container,onMessage,reducedMotion=false}) {
  renderer.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY,container.scrollLeft]})
  renderer.domElement.addEventListener('pointerup',e=>{if(!active||!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8||Math.abs(container.scrollLeft-down[2])>8)return;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const hit=ray.intersectObjects(hits,false)[0];if(hit)trigger(hit.object.userData.surprise)})
  function trigger(id){const h=hotspots.find(h=>h.id===id);if(h){h.run();draw(0);return true}return false}
- // Ten seconds of nightclub takeover: coloured lights (draw()) and every character
- // jumping (their own callbacks, gated on partyState.active) already react on their
- // own — this just flips the switch and flips it back.
+ // A nightclub takeover: coloured lights (draw()) and every character jumping
+ // (their own callbacks, gated on partyState.active) already react on their own —
+ // this just flips the switch and flips it back. The Party pill asks for the
+ // default ten seconds; the PARTY puzzle's finale asks for thirty.
  let partyTimer=null
- function party(){if(partyState.active)return false;partyState.active=true;clearTimeout(partyTimer);partyTimer=setTimeout(()=>{partyState.active=false},10000);return true}
+ function party(duration=10000){if(partyState.active)return false;partyState.active=true;clearTimeout(partyTimer);partyTimer=setTimeout(()=>{partyState.active=false},duration);return true}
  function resize(center=false){const mobile=innerWidth<=700;const previous=center?.5:width>innerWidth?(container.scrollLeft/(width-innerWidth)):.5;width=mobile?Math.max(1200,innerWidth*2.8):innerWidth;height=innerHeight;renderer.setSize(width,height);camera.left=-26;camera.right=26;camera.top=26*height/width;camera.bottom=-camera.top;camera.updateProjectionMatrix();container.scrollLeft=mobile?(width-innerWidth)*previous:0;draw(0)}
  function draw(dt){if(!active||((quiet||motionPaused)&&dt>0))return;if(!quiet&&!motionPaused)clock+=dt;wind.value=quiet||motionPaused?0:clock
  if(partyState.active&&!quiet){const hue=(clock*.6)%1;sun.color.setHSL(hue,.85,.6);fill.color.setHSL((hue+.5)%1,.85,.6)}else{sun.color.copy(sunColor);fill.color.copy(fillColor)}

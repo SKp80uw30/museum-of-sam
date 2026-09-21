@@ -8,7 +8,7 @@
 <title>Happy Birthday, Sam — Museum of Sam</title>
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="manifest" href="./manifest.json">
-<link rel="stylesheet" href="./home.css?v=9">
+<link rel="stylesheet" href="./home.css?v=10">
 </head>
 <body data-state="welcome">
 <div id="living-pan" tabindex="0" role="region" aria-label="Sam’s living coastal garden. On mobile, swipe left or right to explore the scenery."></div>
@@ -67,6 +67,25 @@
   <div class="party-glow"></div>
 </div>
 <div id="party-player" hidden></div>
+<div id="party-game">
+  <div id="party-letters"></div>
+  <div id="party-slots-wrap">
+    <p id="party-caption">Spell <b>PARTY</b> — every letter plays 20 seconds</p>
+    <div id="party-slots" role="group" aria-label="Spell PARTY to unlock the birthday video"></div>
+  </div>
+</div>
+<button id="party-toggle" class="garden-pill" aria-expanded="false" aria-controls="party-game" aria-label="PARTY letter puzzle">PARTY puzzle</button>
+<section id="party-video" hidden aria-label="El Nay Partay video">
+  <div id="party-video-bar">
+    <span>EL NAY PARTAY</span>
+    <button class="pv-btn" data-pv="whole" hidden>↺ All 2 min</button>
+    <button class="pv-btn" data-pv="size" aria-label="Make the video bigger">⤢</button>
+    <button class="pv-btn" data-pv="close" aria-label="Close the video">×</button>
+  </div>
+  <video id="party-video-el" playsinline controls preload="metadata" poster="./video/el-nay-partay-poster.jpg">
+    <source src="./video/el-nay-partay.mp4" type="video/mp4">
+  </video>
+</section>
 <div id="garden-scrim"></div>
 <div id="garden-menu" inert><div id="garden-menu-head"><p>Little things Sam loves</p><button id="garden-menu-close" aria-label="Close little surprises">×</button></div><div id="garden-actions"></div></div>
 <div id="garden-toast" role="status" aria-live="polite" hidden><span></span><button aria-label="Dismiss message">×</button></div>
@@ -76,6 +95,6 @@
 <footer id="footer"><span>A LITTLE MORE LOVE IN THE WORLD</span><span>WITH ALL OUR LOVE ♡</span></footer>
 <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
 <noscript><div class="no-script">Happy Birthday Mum / Sam / Fiz / Samty. We love you this much!<br><a href="./index.html?scene=reef">Underwater Reef</a> · <a href="./index.html?scene=forest">Forest Walkway</a> · <a href="./index.html?scene=jumping_castle">Jumping Castle</a> · <a href="./index.html?scene=gallery_home">Gallery Home</a><p>Enable JavaScript to enjoy your birthday journey and explore the museum.</p></div></noscript>
-<script type="module" src="./home.js?v=party3"></script>
+<script type="module" src="./home.js?v=party4"></script>
 </body>
 </html>

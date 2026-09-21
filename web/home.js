@@ -6,7 +6,7 @@ const announce = document.querySelector('#announcement')
 const motion = matchMedia('(prefers-reduced-motion: reduce)')
 let reduced = motion.matches, W=0,H=0,DPR=1, room, state='welcome', elapsed=0,last=0,stageShown=-1, hover=-1
 let stars=[], galaxy=[], words=[], textFrom=[], portals=[]
-let living=null, gardenPaused=false
+let living=null, gardenPaused=false, partyGame=null
 const images=['reef','forest','jumping-castle','gallery'].map(name=>{const im=new Image();im.onload=()=>{if(W&&!living)buildRoom()};im.src=`./home-assets/${name}.png`;return im})
 let seed=92016
 function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
@@ -89,7 +89,7 @@ function render(){if(!W||!room)return
  if(p.done)setState('reveal')
  }else if(state==='reveal'){starWords(1,reduced?0:elapsed)}else if(state==='returning'){const e=ease(elapsed/(reduced?.6:2.6));ctx.save();ctx.globalAlpha=1-e;starWords(1,elapsed);ctx.restore();drawRoom(reduced?1:lerp(.04,1,e),e);if(e>=1)setState('portals')}
 }
-function setState(next){if(next==='journey'){closeGardenMenu();document.querySelector('#garden-toast').hidden=true;clearTimeout(toastTimer)}if(next==='journey'&&living){const snap=living.snapshot();room=document.createElement('canvas');room.width=Math.round(W*DPR);room.height=Math.round(H*DPR);room.getContext('2d').drawImage(snap.canvas,snap.left,0,snap.width,snap.canvas.height,0,0,room.width,room.height)}living?.setActive(next==='welcome'||next==='portals');state=next;elapsed=0;document.body.dataset.state=next;Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==next});if(next==='journey'){stageShown=-1;document.querySelector('#skip').focus({preventScroll:true})}else if(next==='reveal'){announce.textContent='This much! More than all of that. And more every day.';document.querySelector('#return').focus({preventScroll:true})}else if(next==='portals'){history.replaceState(null,'','?home=portals');announce.textContent='Welcome home, Sam. Choose one of four museum portals.';document.querySelector('.portal-links a').focus({preventScroll:true})}render()}
+function setState(next){if(next==='journey'){closeGardenMenu();document.querySelector('#garden-toast').hidden=true;clearTimeout(toastTimer)}if(next==='journey'&&living){const snap=living.snapshot();room=document.createElement('canvas');room.width=Math.round(W*DPR);room.height=Math.round(H*DPR);room.getContext('2d').drawImage(snap.canvas,snap.left,0,snap.width,snap.canvas.height,0,0,room.width,room.height)}living?.setActive(next==='welcome'||next==='portals');partyGame?.setActive(next==='welcome'||next==='portals');state=next;elapsed=0;document.body.dataset.state=next;Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==next});if(next==='journey'){stageShown=-1;document.querySelector('#skip').focus({preventScroll:true})}else if(next==='reveal'){announce.textContent='This much! More than all of that. And more every day.';document.querySelector('#return').focus({preventScroll:true})}else if(next==='portals'){history.replaceState(null,'','?home=portals');announce.textContent='Welcome home, Sam. Choose one of four museum portals.';document.querySelector('.portal-links a').focus({preventScroll:true})}render()}
 document.querySelector('#begin').addEventListener('click',()=>setState('journey'))
 document.querySelector('#skip').addEventListener('click',()=>setState('reveal'))
 document.querySelector('#return').addEventListener('click',()=>setState('returning'))
@@ -150,32 +150,45 @@ function loadSpotifyIframeApi(){
  })
  return spotifyIframeApiPromise
 }
-async function startParty(){
+// `music:false` is the PARTY-puzzle finale: the video already has its own
+// audio, so the lights run over the top of it in silence rather than fighting
+// a Spotify track.
+async function startParty({duration=10000,music=true}={}){
  if(partyActive)return
  if(!living){gardenMessage('Just a moment — the garden is still waking up.');return}
- if(!living.party())return
+ if(!living.party(duration))return
  partyActive=true
  const button=document.querySelector('#garden-party');button.disabled=true
  document.body.classList.add('party-mode')
  let mount=null,controller=null
- const songs=await loadPartySongs()
- if(songs.length){
-  const pick=songs[Math.floor(Math.random()*songs.length)]
-  gardenMessage(`🎉 Party time! Playing ${pick.character}’s pick…`)
-  try{
-   const IFrameAPI=await loadSpotifyIframeApi()
-   const player=document.querySelector('#party-player');player.hidden=false
-   mount=document.createElement('div');player.append(mount)
-   IFrameAPI.createController(mount,{uri:`spotify:track:${pick.trackId}`,width:'100%',height:'152'},c=>{controller=c;c.addListener('ready',()=>c.play())})
-  }catch(error){console.error('Party music could not start',error)}
- }else{
-  gardenMessage('🎉 Party time! Nominate a song in characters/messages.txt for next time.')
+ if(music){
+  const songs=await loadPartySongs()
+  if(songs.length){
+   const pick=songs[Math.floor(Math.random()*songs.length)]
+   gardenMessage(`🎉 Party time! Playing ${pick.character}’s pick…`)
+   try{
+    const IFrameAPI=await loadSpotifyIframeApi()
+    const player=document.querySelector('#party-player');player.hidden=false
+    mount=document.createElement('div');player.append(mount)
+    IFrameAPI.createController(mount,{uri:`spotify:track:${pick.trackId}`,width:'100%',height:'152'},c=>{controller=c;c.addListener('ready',()=>c.play())})
+   }catch(error){console.error('Party music could not start',error)}
+  }else{
+   gardenMessage('🎉 Party time! Nominate a song in characters/messages.txt for next time.')
+  }
  }
  setTimeout(()=>{
   document.body.classList.remove('party-mode')
   partyActive=false;button.disabled=false
   controller?.pause();controller?.destroy?.()
   const player=document.querySelector('#party-player');player.hidden=true;mount?.remove()
- },10000)
+ },duration)
 }
-document.querySelector('#garden-party').addEventListener('click',startParty)
+document.querySelector('#garden-party').addEventListener('click',()=>startParty())
+
+// The PARTY letter puzzle owns its own tiles, boxes and video panel; all it
+// needs from here is the toast and, on the fifth correct letter, thirty
+// seconds of the nightclub lights playing over the top of the big finish.
+import('./party-letters.js?v=1').then(({createPartyGame})=>{
+ partyGame=createPartyGame({onMessage:gardenMessage,onSolved:()=>startParty({duration:30000,music:false})})
+ partyGame?.setActive(state==='welcome'||state==='portals')
+}).catch(error=>console.error('PARTY puzzle could not start',error))

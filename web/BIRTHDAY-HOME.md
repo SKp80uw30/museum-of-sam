@@ -102,3 +102,53 @@ Rigid details merge by material within each figure to reduce rendering overhead;
 arms retain wave animations. All character greetings were clicked and checked in
 the browser, with no console errors.
 Original garden files are in `backups/home-before-characters/`.
+
+## PARTY letter puzzle — 2026-09-21
+`web/party-letters.js` owns a five-tile puzzle on the homepage garden (welcome
+and portals states only, like the rest of the garden UI). Five shuffled tiles —
+P, A, R, T, Y — scatter down the left and right margins on desktop; five empty
+boxes sit in the bottom-right corner. A tile can be dragged into a box or
+tapped/keyboard-activated to pick it up and then dropped by activating a box.
+A wrong box shakes and says so; the right box turns green and plays one window
+of `web/video/el-nay-partay.mp4`:
+
+| letter | window |
+| --- | --- |
+| P | 0–20s |
+| A | 20–40s |
+| R | 40–60s |
+| T | 60–80s |
+| Y | 80s → the end (the finale runs straight through the closing 100–120s) |
+
+Activating a box that is already filled replays its window, and once all five
+are placed an “↺ All 2 min” button in the panel plays the file end to end.
+
+One `<video>` element serves every window. The file is encoded with
+`-movflags +faststart`, so seeking to 80s is a byte-range request rather than a
+full download, and `preload="metadata"` keeps the 22MB off the wire until the
+first letter lands. **Byte-range support is required for the windows to work at
+all** — Python's `http.server` does not implement `Range`, which makes the video
+report `seekable: [0, 0]` and every window play from 0. Netlify serves ranges
+correctly; test locally with a range-capable server.
+
+The fifth correct letter also calls `onSolved()`, which is `home.js` running
+`startParty({duration:30000, music:false})` — the existing nightclub lasers and
+jumping characters for thirty seconds, deliberately without a Spotify track
+because the video carries its own audio. `living-home.js`'s `party()` now takes
+a duration (default still 10000, which is what the 🎉 Party pill uses).
+
+The video panel is the bottom-right quarter of the screen, with ⤢ to expand it
+to nearly the full viewport, × to close, and the browser's own controls for
+sound, scrubbing and native fullscreen. Its z-index stays below `#party-overlay`
+(1000) so the finale's lasers sweep *over* the picture.
+
+Phones have no free margin to scatter tiles into, so on `max-width:700px` the
+puzzle collapses behind a round 🅿️ button and opens as one bottom stack —
+boxes, then loose letters, then the player — with the swipe hint and replay link
+stepping aside while it is open.
+
+Verified in Chrome at 1440×900 and 390×844: each letter seeks to its own window,
+T's window pauses exactly at 80.0s, the finale starts at 80s and runs past 100s
+without pausing, party-mode is still on at 25s and off by 32s, drag-and-drop and
+tap-to-place both land correctly, and the puzzle hides and pauses its audio
+during the birthday film and returns intact afterwards.

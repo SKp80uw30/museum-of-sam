@@ -286,6 +286,17 @@ last three do). Bump the `?v=` on the `garden-characters.mjs`/`garden-people.js`
 imports and `sw.js`'s `CACHE_NAME` whenever these change, or cached clients keep
 the old cast.
 
+### PARTY letter puzzle
+`web/party-letters.js` runs the homepage's five-tile PARTY puzzle and the video
+panel it drives (`web/video/el-nay-partay.mp4`, encoded with
+`-movflags +faststart`). Each correct letter plays one 20-second window of the
+file by seeking a single `<video>` element; the fifth also asks `home.js` for
+thirty seconds of the existing nightclub lights (`startParty({duration, music})`
+→ `living.party(duration)`). The windows depend on HTTP byte-range support —
+Netlify has it, `python3 -m http.server` does not, and without it every window
+silently plays from 0. Details and the letter→window table are in
+`web/BIRTHDAY-HOME.md`.
+
 ### Living homepage garden
 `web/living-home.js` now owns the independent 3D homepage garden and its 13
 interactive surprises. Existing game/whimsy files remain separate. The homepage
