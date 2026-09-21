@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three/build/three.module.js'
-import {CHARACTERS,birthdayName,birthdayGreeting} from './garden-characters.mjs?v=3'
+import {CHARACTERS,birthdayName,birthdayGreeting} from './garden-characters.mjs?v=4'
 
 export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinder,cone,surprise,callbacks,burst,onMessage,softNotes,textSign,getTime,partyState={}}) {
  // Merge rigid details by material inside each character, keeping arms articulated.
@@ -12,15 +12,16 @@ export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinde
  ball(g,d.shirt,[0,1.12,0],[.4,.5,.25]);ball(g,skin,[0,1.88,0],[.32,.37,.30]);ball(g,skin,[0,1.83,.30],[.045,.055,.045]);
  for(const s of [-1,1]){ball(g,'#244953',[s*.115,1.93,.278],[.029,.035,.025]);ball(g,'#ffffff',[s*.11,1.943,.299],[.008,.011,.008])}
  // A small curved smile belongs to the same friendly toy-like face language.
- const smile=mesh(g,new THREE.TorusGeometry(.09,.009,5,12,Math.PI),'#a16c60',[0,1.77,.29]);smile.rotation.z=Math.PI
+ const smile=mesh(g,new THREE.TorusGeometry(.09,.009,5,12,Math.PI),d.lips||'#a16c60',[0,1.77,.29]);smile.rotation.z=Math.PI
  const capY=d.style==='buzz'?2.09:2.075,capH=d.style==='buzz'?.14:.23
  if(d.style==='balding'){for(const s of [-1,1])ball(g,d.hair,[s*.27,2.0,-.04],[.095,.16,.22])}else ball(g,d.hair,[0,capY,-.035],[.34,capH,.31])
  if(['long','shoulder','curly'].includes(d.style)){const long=d.style!=='shoulder';ball(g,d.hair,[0,long?1.64:1.78,-.20],[.34,long?.51:.35,.17]);for(const s of [-1,1]){if(d.style==='curly'){for(let i=0;i<6;i++)ball(g,i%3===0?'#c39d5d':d.hair,[s*(.29+Math.sin(i)*.025),2.06-i*.14,.01],[.10,.12,.12])}else ball(g,d.hair,[s*.29,long?1.65:1.79,.01],[.10,long?.49:.31,.17])}}
- if(['spiky','pixie'].includes(d.style))for(let i=0;i<7;i++){const a=i*2.4,o=ball(g,i%3===0?(d.style==='pixie'?'#fff3dc':'#b39156'):d.hair,[Math.sin(a)*.20,2.18+Math.cos(i)*.035,Math.cos(a)*.16],[.11,.16,.075]);o.rotation.z=-.4+i*.1}
+ if(['spiky','pixie'].includes(d.style))for(let i=0;i<7;i++){const a=i*2.4,o=ball(g,i%3===0?(d.streak||(d.style==='pixie'?'#fff3dc':'#b39156')):d.hair,[Math.sin(a)*.20,2.18+Math.cos(i)*.035,Math.cos(a)*.16],[.11,.16,.075]);o.rotation.z=-.4+i*.1}
  if(d.style==='braided'){ball(g,d.hair,[.08,2.10,-.25],[.23,.22,.19]);for(let i=0;i<8;i++){const a=i/7*Math.PI;ball(g,i%2?'#806447':d.hair,[Math.cos(a)*.29,2.04+Math.sin(a)*.18,.04],[.075,.075,.10])}}
  if(d.highlights)for(const s of [-1,1]){const o=ball(g,'#d4c19a',[s*.23,2.03,.18],[.05,.20,.045]);o.rotation.z=s*.5}
- if(d.beard){ball(g,d.hair,[0,1.67,.16],[.26,.14,.18]);for(const s of [-1,1])ball(g,d.hair,[s*.23,1.76,.16],[.08,.17,.13])}
- if(d.moustache)for(const s of [-1,1])ball(g,d.hair,[s*.075,1.785,.305],[.105,.048,.038])
+ const facialHair=d.beardColor||d.hair
+ if(d.beard){ball(g,facialHair,[0,1.67,.16],[.26,.14,.18]);for(const s of [-1,1])ball(g,facialHair,[s*.23,1.76,.16],[.08,.17,.13])}
+ if(d.moustache)for(const s of [-1,1])ball(g,facialHair,[s*.075,1.785,.305],[.105,.048,.038])
  if(d.bow){mesh(g,boxGeo,'#f8fcf4',[0,1.35,.235],[.20,.45,.04]);for(const s of [-1,1]){const o=ball(g,'#162e3f',[s*.075,1.51,.27],[.085,.05,.035]);o.rotation.z=s*.3}}
  if(d.glasses)glasses(g,'#282d41');if(d.sunglasses)glasses(g,d.sunglasses,true);if(d.topGlasses)glasses(g,'#26352f',true,true)
  if(d.hat){mesh(g,cylinder,'#223e43',[0,2.18,0],[.47,.045,.37]);mesh(g,cylinder,'#223e43',[0,2.34,-.02],[.3,.32,.25]);mesh(g,cylinder,'#48645c',[0,2.23,-.02],[.308,.06,.258])}
@@ -30,6 +31,24 @@ export function addGardenPeople({scene,group,ball,rod,mesh,sphere,boxGeo,cylinde
  if(d.necklace){for(let i=0;i<7;i++){const a=i/6*Math.PI;ball(g,'#54c7e2',[Math.cos(a)*.22,1.48-Math.sin(a)*.18,.24],[.033,.04,.025])}}
  if(d.hood){const o=mesh(g,new THREE.TorusGeometry(.28,.075,6,16,Math.PI),'#b8d6d5',[0,1.43,-.03]);o.rotation.x=Math.PI/2}
  if(d.freckles)for(const s of [-1,1])for(let i=0;i<3;i++)ball(g,'#986f52',[s*(.13+i*.04),1.82+(i%2)*.035,.27],[.01,.009,.009])
+ if(d.floral)for(let i=0;i<9;i++){const a=i*2.1;ball(g,['#fff4d6','#ffd0e6','#c9f4ff'][i%3],[Math.sin(a)*.24,1.02+Math.cos(a*.7)*.26,.235],[.045,.045,.03])}
+ if(d.turtleneck)mesh(g,cylinder,'#12151c',[0,1.55,0],[.20,.15,.185])
+ // Steampunk goggles worn pushed up on the forehead: a leather band round the
+ // head with two prismatic lenses sitting above the eyes, never over them.
+ if(d.goggles){const gy=2.15,band=mesh(g,new THREE.TorusGeometry(.325,.042,6,18),'#6f5330',[0,gy,-.01]);band.rotation.x=Math.PI/2
+  for(const s of [-1,1]){const rim=mesh(g,new THREE.TorusGeometry(.10,.03,8,14),'#b98a3f',[s*.14,gy,.225]);rim.rotation.x=-.5
+   for(let i=0;i<5;i++)ball(g,['#6ef0c6','#ffe24f','#6fa8ff','#ff7fd0','#a0ff6e'][i],[s*.14+Math.cos(i*1.256)*.037,gy+Math.sin(i*1.256)*.037,.232],[.044,.044,.022])
+   for(let i=0;i<8;i++){const a=i/8*Math.PI*2,o=ball(g,'#d9b061',[s*.14+Math.cos(a)*.132,gy+Math.sin(a)*.132,.205],[.013,.013,.038]);o.rotation.z=a}}}
+ // Black helmet with swept chrome banding, worn over the head so the face is
+ // hidden but the hair still pokes out the top (matching the reference photo).
+ // A rounded dome with a flat angular faceplate bolted to the front. The
+ // faceplate is a box, not another ellipsoid, so the visor and the swept
+ // chrome strips have a flat plane to sit proud of — laid on a sphere they
+ // just sink in and only their tips peek out past the cheeks.
+ if(d.mask){ball(g,'#191a1f',[0,1.90,.01],[.35,.38,.30]);mesh(g,boxGeo,'#0d0e11',[0,1.82,.30],[.27,.33,.11])
+  for(const s of [-1,1])for(let i=0;i<3;i++){const o=mesh(g,boxGeo,'#c2c7d0',[s*(.085+i*.048),1.855-i*.05,.365],[.023,.135,.022]);o.rotation.z=s*(.16+i*.13)}
+  mesh(g,boxGeo,'#b9bec7',[0,2.005,.355],[.25,.028,.022]);mesh(g,boxGeo,'#05060a',[0,1.972,.365],[.225,.036,.022])
+  mesh(g,boxGeo,'#c2c7d0',[0,1.705,.36],[.075,.115,.02])}
  const arms=[-1,1].map(s=>{const a=group(g,[s*.35,1.45,0]);rod(a,[0,0,0],[s*.12,-.55,.06],.10,d.shirt);ball(a,skin,[s*.12,-.57,.06],[.12,.13,.11]);if(d.stripe)rod(a,[s*.08,-.05,.07],[s*.17,-.49,.11],.025,d.stripe);return a});let until=0
  consolidate(g);surprise(name,`${name}: Happy Birthday Sammy`,g,()=>{until=getTime()+5;burst([x,2.6,z],'#ff82bc');onMessage(birthdayGreeting(d.file));softNotes([330,440,554])})
  // At the party, everyone jumps to their own beat (phase-offset by x, like a real crowd) with both arms thrown up.

@@ -89,7 +89,7 @@ function render(){if(!W||!room)return
  if(p.done)setState('reveal')
  }else if(state==='reveal'){starWords(1,reduced?0:elapsed)}else if(state==='returning'){const e=ease(elapsed/(reduced?.6:2.6));ctx.save();ctx.globalAlpha=1-e;starWords(1,elapsed);ctx.restore();drawRoom(reduced?1:lerp(.04,1,e),e);if(e>=1)setState('portals')}
 }
-function setState(next){if(next==='journey'){document.querySelector('#garden-menu').hidden=true;document.querySelector('#garden-toast').hidden=true;document.querySelector('#garden-discover').setAttribute('aria-expanded','false')}if(next==='journey'&&living){const snap=living.snapshot();room=document.createElement('canvas');room.width=Math.round(W*DPR);room.height=Math.round(H*DPR);room.getContext('2d').drawImage(snap.canvas,snap.left,0,snap.width,snap.canvas.height,0,0,room.width,room.height)}living?.setActive(next==='welcome'||next==='portals');state=next;elapsed=0;document.body.dataset.state=next;Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==next});if(next==='journey'){stageShown=-1;document.querySelector('#skip').focus({preventScroll:true})}else if(next==='reveal'){announce.textContent='This much! More than all of that. And more every day.';document.querySelector('#return').focus({preventScroll:true})}else if(next==='portals'){history.replaceState(null,'','?home=portals');announce.textContent='Welcome home, Sam. Choose one of four museum portals.';document.querySelector('.portal-links a').focus({preventScroll:true})}render()}
+function setState(next){if(next==='journey'){closeGardenMenu();document.querySelector('#garden-toast').hidden=true;clearTimeout(toastTimer)}if(next==='journey'&&living){const snap=living.snapshot();room=document.createElement('canvas');room.width=Math.round(W*DPR);room.height=Math.round(H*DPR);room.getContext('2d').drawImage(snap.canvas,snap.left,0,snap.width,snap.canvas.height,0,0,room.width,room.height)}living?.setActive(next==='welcome'||next==='portals');state=next;elapsed=0;document.body.dataset.state=next;Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==next});if(next==='journey'){stageShown=-1;document.querySelector('#skip').focus({preventScroll:true})}else if(next==='reveal'){announce.textContent='This much! More than all of that. And more every day.';document.querySelector('#return').focus({preventScroll:true})}else if(next==='portals'){history.replaceState(null,'','?home=portals');announce.textContent='Welcome home, Sam. Choose one of four museum portals.';document.querySelector('.portal-links a').focus({preventScroll:true})}render()}
 document.querySelector('#begin').addEventListener('click',()=>setState('journey'))
 document.querySelector('#skip').addEventListener('click',()=>setState('reveal'))
 document.querySelector('#return').addEventListener('click',()=>setState('returning'))
@@ -107,22 +107,28 @@ addEventListener('keydown',event=>{if(event.key==='Escape'&&state==='journey')se
 
 // The birthday film remains independent of the garden renderer. A WebGL failure
 // leaves the invitation and destinations usable through the original fallback.
-function gardenMessage(message){const toast=document.querySelector('#garden-toast');toast.querySelector('span').textContent=message;toast.hidden=false}
+let toastTimer=null
+function gardenMessage(message){const toast=document.querySelector('#garden-toast');toast.querySelector('span').textContent=message;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.hidden=true},6000)}
 if(typeof WebGLRenderingContext!=='undefined'){
  import('./living-home.js?v=party1').then(({createLivingHome})=>{
   living=createLivingHome({container:document.querySelector('#living-pan'),onMessage:gardenMessage,reducedMotion:reduced})
   document.body.classList.add('living-ready');living.resize(true);living.setActive(state==='welcome'||state==='portals')
   const actions=document.querySelector('#garden-actions')
-  living.hotspots.forEach(({id,label})=>{const button=document.createElement('button');button.textContent=label;button.dataset.surprise=id;button.addEventListener('click',()=>living.trigger(id));actions.append(button)})
+  living.hotspots.forEach(({id,label})=>{const button=document.createElement('button');button.textContent=label;button.dataset.surprise=id;button.addEventListener('click',()=>{living.trigger(id);if(matchMedia('(max-width:700px)').matches)closeGardenMenu()});actions.append(button)})
   console.info('Living garden ready:',JSON.stringify(living.stats()))
  }).catch(error=>{console.error('Living garden could not start',error);document.body.classList.add('garden-unavailable');gardenMessage('The garden couldn’t open on this device. Your birthday journey and the four worlds are still ready.')})
 }else{
  document.body.classList.add('garden-unavailable')
 }
-document.querySelector('#garden-discover').addEventListener('click',()=>{const menu=document.querySelector('#garden-menu'),button=document.querySelector('#garden-discover');menu.hidden=!menu.hidden;button.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)menu.querySelector('button')?.focus()})
+const gardenMenu=document.querySelector('#garden-menu'),gardenScrim=document.querySelector('#garden-scrim'),gardenDiscover=document.querySelector('#garden-discover')
+function openGardenMenu(){gardenMenu.classList.add('open');gardenMenu.inert=false;gardenScrim.classList.add('open');gardenDiscover.setAttribute('aria-expanded','true');gardenMenu.querySelector('button')?.focus()}
+function closeGardenMenu(returnFocus){if(!gardenMenu.classList.contains('open'))return;gardenMenu.classList.remove('open');gardenMenu.inert=true;gardenScrim.classList.remove('open');gardenDiscover.setAttribute('aria-expanded','false');if(returnFocus)gardenDiscover.focus()}
+gardenDiscover.addEventListener('click',()=>{gardenMenu.classList.contains('open')?closeGardenMenu(true):openGardenMenu()})
+gardenScrim.addEventListener('click',()=>closeGardenMenu())
+document.querySelector('#garden-menu-close').addEventListener('click',()=>closeGardenMenu(true))
 document.querySelector('#garden-motion').addEventListener('click',()=>{gardenPaused=!gardenPaused;living?.setPaused(gardenPaused);const button=document.querySelector('#garden-motion');button.setAttribute('aria-pressed',String(gardenPaused));button.textContent=gardenPaused?'Let it live':'Pause garden'})
-document.querySelector('#garden-toast button').addEventListener('click',()=>{document.querySelector('#garden-toast').hidden=true})
-addEventListener('keydown',event=>{if(event.key==='Escape'){const menu=document.querySelector('#garden-menu');if(!menu.hidden){menu.hidden=true;document.querySelector('#garden-discover').setAttribute('aria-expanded','false');document.querySelector('#garden-discover').focus()}}})
+document.querySelector('#garden-toast button').addEventListener('click',()=>{document.querySelector('#garden-toast').hidden=true;clearTimeout(toastTimer)})
+addEventListener('keydown',event=>{if(event.key==='Escape')closeGardenMenu(true)})
 
 document.querySelectorAll('#garden-pan-controls button').forEach((button,i)=>button.addEventListener('click',()=>document.querySelector('#living-pan').scrollBy({left:(i?1:-1)*innerWidth*.7,behavior:reduced?'instant':'smooth'})))
 

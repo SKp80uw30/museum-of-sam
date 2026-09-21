@@ -22,5 +22,8 @@ export const CHARACTERS = [
  {file:'Nancy.png',x:10.5,z:4.5,hair:'#a9855f',style:'shoulder',shirt:'#f2b134',scale:0.82},
  {file:'Orla.png',x:-15,z:2,hair:'#5b4632',style:'long',shirt:'#8a5fbf',flower:'#ff8fc7',scale:0.82},
  {file:'Kieran.png',x:17,z:5.5,hair:'#3b2e22',style:'curly',shirt:'#22344a'},
+ {file:'Veda.png',x:-12,z:9.8,hair:'#2b2320',style:'spiky',streak:'#3a2f28',shirt:'#4a76c6',floral:true,mask:true,scale:0.82},
+ {file:'Dicky.png',x:20.5,z:4.5,hair:'#ece5d8',style:'spiky',streak:'#f6f1e6',shirt:'#1e2129',sunglasses:'#c9a227',beard:true,beardColor:'#8e8880',turtleneck:true},
+ {file:'Tashi.png',x:-20.5,z:6.5,hair:'#e8d49a',style:'long',shirt:'#2b2733',goggles:true,lips:'#c83a5a'},
 ]
 export const HONEY_FILE='Honey_with_tutu.png'

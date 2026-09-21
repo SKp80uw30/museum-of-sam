@@ -78,10 +78,12 @@ The full normal-speed film also completed successfully in the browser, reached
 separate when the viewport is in landscape orientation.
 
 ## Reference-inspired birthday guests
-All 17 images in `characters/` were inspected as visual references only. No photos
+Every image in `characters/` was inspected as a visual reference only. No photos
 are loaded into the scene, copied to the homepage assets, or used as textures.
 `garden-characters.mjs` maps each filename to a stylised colour/accessory design;
-`garden-people.js` builds 16 animated figures in the existing toy-like style.
+`garden-people.js` builds one animated figure per entry in the existing toy-like
+style. Adding a person is a single row in `CHARACTERS` — nothing else has to
+change, because the museum's easter-egg roster reads the same list (see below).
 The prior Thea and Steve figures are replaced, not duplicated. Existing Honey now
 wears the reference's pink/lime tutu. Filenames supply display names (underscores
 become spaces; original case retained), and every character uses the exact text
@@ -90,7 +92,13 @@ through Little surprises as well as directly clickable on their geometry.
 
 Distinguishing details include glasses, hair flowers, a bow tie/white moustache,
 braided or curly hair, flower necklaces, a feathered crown, a hat and sunglasses.
+Added 2026-09-16 with Veda, Dicky and Tashi: `mask` (a black helmet with a chrome
+visor — a flat box faceplate, because details laid on the dome sphere sink into
+it), `goggles` (prismatic steampunk lenses worn up on the forehead), `floral`,
+`turtleneck`, `lips`, `beardColor` and `streak` (the spiky/pixie highlight colour,
+previously hardcoded to one mid-brown that read wrong on bleached or jet-black
+hair).
 Rigid details merge by material within each figure to reduce rendering overhead;
-arms retain wave animations. Garden total: 27 interactive targets. All 17 character
-greetings were clicked and checked in the browser, with no console errors.
+arms retain wave animations. All character greetings were clicked and checked in
+the browser, with no console errors.
 Original garden files are in `backups/home-before-characters/`.

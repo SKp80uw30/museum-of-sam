@@ -1,5 +1,5 @@
-import {addGardenPeople} from './garden-people.js?v=3'
-import {HONEY_FILE,birthdayGreeting,birthdayName} from './garden-characters.mjs?v=3'
+import {addGardenPeople} from './garden-people.js?v=4'
+import {HONEY_FILE,birthdayGreeting,birthdayName} from './garden-characters.mjs?v=4'
 import * as THREE from './vendor/three/build/three.module.js'
 
 // A self-contained, locally rendered garden. No game-scene globals or network assets.

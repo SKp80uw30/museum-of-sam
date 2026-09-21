@@ -177,7 +177,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import { CHARACTERS, birthdayName, HONEY_FILE } from './garden-characters.mjs?v=3'
+import { CHARACTERS, birthdayName, HONEY_FILE } from './garden-characters.mjs?v=4'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tunables — per-theme. Every 5 scenes shares this one loader (Phase 5/7);
@@ -559,7 +559,8 @@ scene.add(shaftGroup)
 // either real scene objects or cheap new procedural props — each wired to
 // a trigger (click / walk-near / jump-on) and one of 5 reusable effect
 // primitives (squish-pulse, color-cycle, particle-burst, hinge-open,
-// spawn-animate-despawn). Per-scene discovery is scored 0/15 and persisted
+// spawn-animate-despawn). Per-scene discovery is scored out of whatever
+// that scene registers (15 for most worlds, 18 for the reef) and persisted
 // to localStorage; nothing beyond that is persisted (fine if it resets —
 // see TODO.md Phase 8).
 const eggHudEl = document.getElementById('egg-hud')
@@ -790,9 +791,9 @@ const burstSpriteTexture = makeSoftDiscTexture() // reuses the particulates' sof
 
 // Reuses the same birthday-cast data the homepage's living garden
 // (living-home.js/garden-people.js) draws from, so the roster matches
-// exactly — 16 people + Honey the dog. The garden has no exported bird
-// list (they're inlined in living-home.js), so the 5 species are
-// restated here with the same names/colors.
+// exactly — every person in CHARACTERS plus Honey the dog. The garden has
+// no exported bird list (they're inlined in living-home.js), so the 5
+// species are restated here with the same names/colors.
 function pickAccessory(d) {
   if (d.hat) return { type: 'hat', color: 0x223e43 }
   if (d.crown) return { type: 'crown' }
@@ -804,6 +805,8 @@ function pickAccessory(d) {
   if (d.lei) return { type: 'lei' }
   if (d.necklace) return { type: 'necklace' }
   if (d.flower) return { type: 'flower', color: d.flower }
+  if (d.mask) return { type: 'mask' }
+  if (d.goggles) return { type: 'goggles' }
   return null
 }
 const POPUP_CHARACTERS = [
@@ -814,7 +817,16 @@ const POPUP_CHARACTERS = [
   { kind: 'bird', name: 'Kookaburra', body: 0xf7dfb4, wing: 0x805b40 },
   { kind: 'bird', name: 'Kingfisher', body: 0x16bfe0, wing: 0x087eaa },
   { kind: 'bird', name: 'Seagull', body: 0xf7ffff, wing: 0x9ebec6 },
-] // 22 characters total — 60 eggs cycle through this with a per-world offset
+] // Every egg's character comes from here, by index (see buildEggAt).
+
+// Eggs that must show one *specific* person (the newest additions to the
+// cast each get a dedicated egg, rather than only turning up by chance in
+// the index cycle) look their index up by name instead of hardcoding it,
+// so the pinned egg follows the roster if CHARACTERS is ever reordered.
+function popupIndexOf(name) {
+  const idx = POPUP_CHARACTERS.findIndex((c) => c.name === name)
+  return idx >= 0 ? idx : 0
+}
 
 function buildBird(bodyColor = 0x3a2f28, wingColor = 0x5a4a3a, crest = false) {
   const group = new THREE.Group()
@@ -945,6 +957,44 @@ function buildPersonFigure(c) {
     const flower = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshStandardMaterial({ color: acc.color }))
     flower.position.set(-0.075, 0.335, 0.04)
     group.add(flower)
+  } else if (acc?.type === 'mask') {
+    // Black helmet with a chrome visor bar — the toy-figure shorthand for
+    // the same masked look the garden avatar builds in full.
+    const shellMat = new THREE.MeshStandardMaterial({ color: 0x191a1f, roughness: 0.35, metalness: 0.2 })
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.093, 12, 10), shellMat)
+    shell.position.set(0, 0.303, 0.005)
+    shell.scale.set(1, 1.02, 1)
+    group.add(shell)
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.016, 0.02), new THREE.MeshStandardMaterial({ color: 0x05060a }))
+    visor.position.set(0, 0.315, 0.085)
+    group.add(visor)
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xc2c7d0, roughness: 0.2, metalness: 0.8 })
+    for (const s of [-1, 1]) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.07, 0.014), chromeMat)
+      band.position.set(s * 0.055, 0.285, 0.062)
+      band.rotation.z = s * 0.45
+      group.add(band)
+    }
+  } else if (acc?.type === 'goggles') {
+    // Prismatic-lensed goggles pushed up onto the forehead.
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.013, 6, 14), new THREE.MeshStandardMaterial({ color: 0x6f5330 }))
+    band.position.set(0, 0.345, 0)
+    band.rotation.x = Math.PI / 2
+    group.add(band)
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xb98a3f, roughness: 0.4, metalness: 0.6 })
+    const lensColors = [0x6ef0c6, 0xffe24f, 0x6fa8ff, 0xff7fd0]
+    for (const s of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.009, 6, 12), rimMat)
+      rim.position.set(s * 0.038, 0.348, 0.068)
+      rim.rotation.x = -0.5
+      group.add(rim)
+      lensColors.forEach((color, i) => {
+        const a = (i / lensColors.length) * Math.PI * 2
+        const shard = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), new THREE.MeshStandardMaterial({ color }))
+        shard.position.set(s * 0.038 + Math.cos(a) * 0.011, 0.348 + Math.sin(a) * 0.011, 0.072)
+        group.add(shard)
+      })
+    }
   }
   return group
 }
@@ -1035,8 +1085,11 @@ function openEasterEgg(eggGroup, character) {
     const liftT = elapsed < liftDuration ? elapsed / liftDuration
       : elapsed < revealHold ? 1
       : Math.max(0, 1 - (elapsed - revealHold) / closeDuration)
-    top.position.set(liftT * EGG_RADIUS * 0.7, liftT * EGG_REST_Y * 1.15, 0)
-    top.rotation.z = liftT * 0.6
+    // Tipped far enough aside to clear the figure's head — at 0.7 radius the
+    // lid sat directly over it and hid exactly the hats/masks/goggles that
+    // tell one character from another.
+    top.position.set(liftT * EGG_RADIUS * 1.75, liftT * EGG_REST_Y * 1.5, 0)
+    top.rotation.z = liftT * 1.05
 
     let figScale = 0
     if (elapsed > liftDuration) {
@@ -1141,6 +1194,17 @@ function initReefEggs(hallway) {
   placeEasterEgg('reef-message-bottle', 'click', new THREE.Vector3(2.0, groundHeightAt(2.0, -40) + EGG_REST_Y, -40), O + i++)
 
   placeEasterEgg('reef-drifting-jellyfish', 'click', new THREE.Vector3(0.6, 2.6, -50), O + i++, { maxDistance: 6 })
+
+  // Three eggs pinned to specific people rather than taken from the index
+  // cycle. The reef is the one world whose slice of the roster (O=0, 15
+  // eggs => indices 0-14) never reaches the newest cast members, while the
+  // other three worlds' slices all do — so pinning them here is what makes
+  // Veda, Dicky and Tashi findable in every location.
+  placeEasterEgg('reef-masked-diver', 'click', new THREE.Vector3(-2.0, groundHeightAt(-2.0, -8) + EGG_REST_Y, -8), popupIndexOf('Veda'))
+
+  placeEasterEgg('reef-shades-in-the-shallows', 'click', new THREE.Vector3(2.0, groundHeightAt(2.0, -34) + EGG_REST_Y, -34), popupIndexOf('Dicky'))
+
+  placeEasterEgg('reef-goggled-explorer', 'walk', new THREE.Vector3(-0.9, groundHeightAt(-0.9, -45) + EGG_REST_Y, -45), popupIndexOf('Tashi'), { radius: 1.8, cooldown: 6 })
 
   updateEggHud()
 }

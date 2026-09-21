@@ -270,6 +270,24 @@ Preserve the small entry redirect and Home link when changing shared index.html.
 The birthday sequence is illustrated and not astronomically to scale. Portal
 images are snapshots; updating gameplay does not require touching homepage code.
 
+### Character roster (single source of truth)
+`web/garden-characters.mjs`'s `CHARACTERS` list is the one place a person is
+defined. The homepage garden (`garden-people.js`) builds a full avatar from it,
+and the museum's easter eggs (`web/index.html`'s `POPUP_CHARACTERS`) build a
+simplified toy figure from the same row — so adding a person is one line there
+plus, if they need a new prop, a clause in both builders. Reference photos live
+in `characters/` (untracked, never loaded at runtime — they only supply the
+display name via the filename stem, so name files the way the name should read).
+Add a matching block to `characters/messages.txt` too.
+
+Each world's eggs draw characters by index with a per-world offset (reef 0,
+forest 6, castle 12, gallery 18). Adding people shifts who lands where, so after
+a roster change check the four slices still cover everyone; eggs that must show
+one specific person use `popupIndexOf(name)` instead of the cycle (the reef's
+last three do). Bump the `?v=` on the `garden-characters.mjs`/`garden-people.js`
+imports and `sw.js`'s `CACHE_NAME` whenever these change, or cached clients keep
+the old cast.
+
 ### Living homepage garden
 `web/living-home.js` now owns the independent 3D homepage garden and its 13
 interactive surprises. Existing game/whimsy files remain separate. The homepage
