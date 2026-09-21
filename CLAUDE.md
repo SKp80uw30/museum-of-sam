@@ -106,25 +106,23 @@ images demand.
 
 ## Deployment
 
-Two independent, live deployments exist — pushing code does **not**
-automatically update both:
+**One deployment: Netlify — https://museum-of-sam.netlify.app/**
 
-- **Netlify — https://museum-of-sam.netlify.app/** (added 2026-09-13). Netlify
-  is connected directly to this GitHub repo (`SKp80uw30/museum-of-sam`) and
-  auto-builds/publishes on every push to `main` — no manual deploy step,
-  `git push origin main` is enough. This is the primary link to hand out for
-  testing/sharing.
-- **freedaiy Tailscale Funnel — https://freedaiy.tail25e0dd.ts.net:8443/**
-  (added 2026-09-11, see the global CLAUDE.md's "Remote Linux Box" section
-  for what `freedaiy` is). This one is **not** wired to git at all — it
-  serves a separate rsynced copy on that box, so it only picks up changes
-  after manually running `tools/deploy_to_freedaiy.sh` from the repo root.
-  Forgetting this step is the most likely way the two deployments drift out
-  of sync with each other.
+Netlify is connected directly to this GitHub repo (`SKp80uw30/museum-of-sam`)
+and auto-builds/publishes on every push to `main`. There is no manual deploy
+step and nothing else to keep in sync — **`git push origin main` is the whole
+deploy**. "Push so it's live" means exactly that, with no follow-up question
+needed about which target.
 
-Both serve the same `web/` (+ `exports/`) content; there's no per-deployment
-code branching. When asked to "push so it's live" without more context,
-confirm which of the two (or both) the user means.
+Netlify publishes the **repo root**, not `web/`, so live URLs carry the `web/`
+prefix: the artwork manifest is at `/web/artwork/photos-manifest.json`, and the
+root `index.html` is just a redirect stub into `./web/home.html`. Keep this in
+mind when curling the live site to verify a deploy.
+
+Self-hosting on the `freedaiy` Tailscale Funnel box was **retired 2026-09-21**
+and is no longer a deployment target. Don't rsync to it, don't treat its
+contents as live, and don't ask which deployment is meant — Netlify is the only
+one. (The box itself still exists for unrelated work; see the global CLAUDE.md.)
 
 ## Working conventions
 
