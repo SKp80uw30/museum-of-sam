@@ -311,16 +311,29 @@ for the installed PWA. `?orientation=any` disables the gate;
 `(orientation: portrait)` media rule via CSSOM to see it without a real
 rotation).
 
-Tilt-to-look in `index.html` is now an opt-out, persisted in localStorage as
-`museum-of-sam.tilt-look` and toggled by the `#motion-toggle` pill (touch
-devices only, top-right next to the credits ⓘ, above the entry overlay so it
-can be set before walking in). Off simply never attaches the
+Tilt-to-look in `index.html` is now **opt-in** (default off), persisted in
+localStorage as `museum-of-sam.tilt-look` and toggled by the `#motion-toggle`
+pill (touch devices only, top-right next to the credits ⓘ, above the entry
+overlay so it can be set before walking in). Off simply never attaches the
 `deviceorientation` listener, leaving the existing drag-to-look path as the
-only thing steering the camera; switching off mid-walk hands the camera over
-at its current facing/pitch with the roll flattened, since the quaternion
-tilt path can leave roll that the Euler-writing drag path would freeze in.
-The preference is only applied to the sensor once the walk has started, so
-nobody gets an iOS permission prompt on a screen they haven't entered.
+only thing steering the camera. The preference is only applied to the sensor
+once the walk has started, so nobody gets an iOS permission prompt on a screen
+they haven't entered.
+
+`applyDeviceOrientation` no longer follows the classic
+DeviceOrientationControls algorithm to the letter. That algorithm keeps the
+horizon level by rolling the camera by `screen.orientation.angle`, which
+assumes the browser reports that angle the way the algorithm expects; on a
+landscape iPad it doesn't, and the entire view sat on its side with the
+horizon turning along with the device, so there was no way to right it. We now
+take only the direction the back of the device points out of the device
+quaternion and rebuild the camera as yaw + pitch with roll forced to zero.
+**Don't reintroduce a roll term** — roll is never wanted in a first-person
+walk, and rolling a camera about its own Z axis doesn't change where it looks,
+so the screen angle never affected the facing anyway. Verified against
+simulated sensor values: `gamma` maps 1:1 to pitch and `alpha` 1:1 to yaw from
+either landscape hold, with roll 0 throughout (`window.__debug.setMotionLook`
+/ `simulateOrientation` drive this from the console).
 
 ### Living homepage garden
 `web/living-home.js` now owns the independent 3D homepage garden and its 13

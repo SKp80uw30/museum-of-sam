@@ -155,7 +155,7 @@ if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(l
   <h1 id="overlay-title">Museum of Sam</h1>
   <p id="overlay-cta">Click to walk in</p>
   <p class="hint desktop-hint">WASD / arrows to move · mouse to look · Esc to release cursor · C to toggle collision mesh</p>
-  <p class="hint touch-hint" style="display:none">Tilt your phone to look around · use the arrows bottom-right to walk</p>
+  <p class="hint touch-hint" style="display:none">Swipe the screen to look around · use the arrows bottom-right to walk</p>
   <p class="hint" id="nav-hint">Number keys 1–4 or the tiles bottom-left jump straight to any wing</p>
 </div>
 <div id="crosshair"></div>
@@ -166,7 +166,7 @@ if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(l
 <button id="credits-toggle" title="Asset credits">ⓘ</button>
 <div id="credits-panel"></div>
 <nav id="scene-nav"></nav>
-<button id="motion-toggle" aria-pressed="true" aria-label="Look around by moving your device"><span aria-hidden="true">⟳</span> Tilt look <span class="motion-state">On</span></button>
+<button id="motion-toggle" aria-pressed="false" aria-label="Look around by moving your device"><span aria-hidden="true">⟳</span> Tilt look <span class="motion-state">Off</span></button>
 <div id="mobile-controls">
   <button id="btn-jump" class="move-btn jump-btn" aria-label="Jump">🦘</button>
   <button id="btn-forward" class="move-btn" aria-label="Move forward">▲</button>
@@ -1884,26 +1884,45 @@ let mobileActive = false
 let useOrientationLook = false
 const mobileControlsEl = document.getElementById('mobile-controls')
 
-// Classic device-orientation → camera-quaternion conversion (the algorithm
-// behind three.js's now-removed DeviceOrientationControls example) — phone
-// held vertically in front of you like a window, tilt to look around.
-const _zee = new THREE.Vector3(0, 0, 1)
-const _q0 = new THREE.Quaternion()
-const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)) // -PI/2 around world X
-let orientationYawOffset = null // calibrated on first reading so "however you're holding the phone" = current facing
+// Device tilt → camera yaw + pitch. Built on the classic device-orientation
+// quaternion (three.js's removed DeviceOrientationControls example), but with
+// one deliberate departure: we take only the direction the *back of the
+// device* points out of that quaternion and rebuild the camera from it as
+// yaw + pitch with the roll forced to zero.
+//
+// The original algorithm instead rolls the camera by `screen.orientation.angle`
+// to keep the horizon level, which only works if the browser reports that
+// angle the way the algorithm assumes. On a landscape iPad it doesn't, and the
+// whole view sat permanently on its side — turning the device just turned the
+// horizon with it, so there was no way out of it. Roll is never wanted in a
+// first-person walk anyway, so dropping it is both the fix and the simpler
+// rule: the horizon stays level however the device is held. It also makes the
+// screen angle irrelevant rather than load-bearing — rolling a camera about
+// its own Z axis doesn't move the direction it looks, so the term we removed
+// never affected where you were facing in the first place.
+const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)) // -PI/2 around X: look out the back of the device
+const _deviceEuler = new THREE.Euler()
+const _deviceQuat = new THREE.Quaternion()
+const _deviceForward = new THREE.Vector3()
+let orientationYawOffset = null // calibrated on first reading so "however you're holding it now" = the way you're already facing
 function applyDeviceOrientation(evt) {
   if (!motionLookEnabled) return // toggled off mid-session; drag-look takes over
   if (evt.alpha === null) return // some browsers fire a null-filled event once before real sensor data arrives
   const alpha = THREE.MathUtils.degToRad(evt.alpha)
   const beta = THREE.MathUtils.degToRad(evt.beta || 0)
   const gamma = THREE.MathUtils.degToRad(evt.gamma || 0)
-  const screenAngle = THREE.MathUtils.degToRad(screen.orientation?.angle ?? window.orientation ?? 0)
-  if (orientationYawOffset === null) orientationYawOffset = camera.rotation.y - alpha
+  _deviceEuler.set(beta, alpha, -gamma, 'YXZ')
+  _deviceQuat.setFromEuler(_deviceEuler).multiply(_q1)
+  _deviceForward.set(0, 0, -1).applyQuaternion(_deviceQuat)
+  const yaw = Math.atan2(-_deviceForward.x, -_deviceForward.z)
+  const pitch = Math.asin(THREE.MathUtils.clamp(_deviceForward.y, -1, 1))
+  if (orientationYawOffset === null) orientationYawOffset = camera.rotation.y - yaw
   useOrientationLook = true
-  const euler = new THREE.Euler(beta, alpha + orientationYawOffset, -gamma, 'YXZ')
-  camera.quaternion.setFromEuler(euler)
-  camera.quaternion.multiply(_q1)
-  camera.quaternion.multiply(_q0.setFromAxisAngle(_zee, -screenAngle))
+  camera.rotation.set(
+    THREE.MathUtils.clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT),
+    yaw + orientationYawOffset,
+    0,
+  )
 }
 
 // Fallback for devices/browsers with no usable orientation sensor (denied
@@ -1950,8 +1969,8 @@ function onTouchLookEnd(e) {
 // `deviceorientation` listener is never attached, which leaves the drag-look
 // path above as the only thing steering the camera.
 const MOTION_LOOK_KEY = 'museum-of-sam.tilt-look'
-let motionLookEnabled = true
-try { motionLookEnabled = localStorage.getItem(MOTION_LOOK_KEY) !== 'off' } catch {}
+let motionLookEnabled = false // opt-in: swipe-to-look is the default, tilt makes some people queasy
+try { motionLookEnabled = localStorage.getItem(MOTION_LOOK_KEY) === 'on' } catch {}
 let orientationAttached = false
 const motionToggleEl = document.getElementById('motion-toggle')
 
@@ -1975,17 +1994,8 @@ function disableMotionLook() {
     window.removeEventListener('deviceorientation', applyDeviceOrientation)
     orientationAttached = false
   }
-  if (useOrientationLook) {
-    // Hand the camera over to drag-look exactly where the tilt left it, but
-    // flattened: the quaternion path can leave roll on the camera, which
-    // drag-look (which writes Euler y/x only) would otherwise freeze in.
-    const dir = camera.getWorldDirection(new THREE.Vector3())
-    camera.rotation.set(
-      THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)), -PITCH_LIMIT, PITCH_LIMIT),
-      Math.atan2(-dir.x, -dir.z),
-      0,
-    )
-  }
+  // Nothing to clean up on the camera: both paths write plain yaw/pitch with
+  // no roll, so drag-look simply carries on from wherever the tilt left off.
   useOrientationLook = false
   orientationYawOffset = null // so re-enabling recalibrates to the current facing
 }

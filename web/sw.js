@@ -7,7 +7,7 @@
 // new photos) and CLAUDE.md already documents cache-busting query strings
 // on the JS modules; adding a second caching layer on top of that would
 // just reintroduce the staleness problem it was designed to avoid.
-const CACHE_NAME = 'museum-of-sam-shell-v10-landscape'
+const CACHE_NAME = 'museum-of-sam-shell-v11-tilt-fix'
 const SHELL_URLS = [
   './',
   './index.html',
