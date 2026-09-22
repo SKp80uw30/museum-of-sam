@@ -297,6 +297,31 @@ Netlify has it, `python3 -m http.server` does not, and without it every window
 silently plays from 0. Details and the letter→window table are in
 `web/BIRTHDAY-HOME.md`.
 
+### Landscape lock and tilt-look toggle (2026-09-23)
+`web/orientation-gate.js` is a plain (non-module) script loaded by both
+`home.html` and `index.html`. On touch devices (coarse pointer **and** a real
+touch digitiser — a touch-screen laptop on a portrait monitor must not be
+gated forever) it asks for `screen.orientation.lock('landscape')` and, more
+importantly, covers the page with a "turn your device sideways" screen
+whenever the viewport is portrait. The lock API is the optional half: only
+Chrome/Android honours it, and only in fullscreen, so on iPad/iOS the CSS
+gate is the whole mechanism. `manifest.json` is `"orientation": "landscape"`
+for the installed PWA. `?orientation=any` disables the gate;
+`?orientation=force` turns it on from a desktop browser for testing (flip the
+`(orientation: portrait)` media rule via CSSOM to see it without a real
+rotation).
+
+Tilt-to-look in `index.html` is now an opt-out, persisted in localStorage as
+`museum-of-sam.tilt-look` and toggled by the `#motion-toggle` pill (touch
+devices only, top-right next to the credits ⓘ, above the entry overlay so it
+can be set before walking in). Off simply never attaches the
+`deviceorientation` listener, leaving the existing drag-to-look path as the
+only thing steering the camera; switching off mid-walk hands the camera over
+at its current facing/pitch with the roll flattened, since the quaternion
+tilt path can leave roll that the Euler-writing drag path would freeze in.
+The preference is only applied to the sensor once the walk has started, so
+nobody gets an iOS permission prompt on a screen they haven't entered.
+
 ### Living homepage garden
 `web/living-home.js` now owns the independent 3D homepage garden and its 13
 interactive surprises. Existing game/whimsy files remain separate. The homepage

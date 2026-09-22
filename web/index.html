@@ -18,6 +18,7 @@ if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(l
 <meta name="apple-mobile-web-app-title" content="Museum of Sam" />
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 <link rel="icon" href="./icons/icon-192.png" />
+<script src="./orientation-gate.js?v=1"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #05141c; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
   canvas { display: block; }
@@ -126,6 +127,20 @@ if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(l
   #mobile-controls .jump-btn { border-color: rgba(255,225,140,0.5); display: none; }
   #mobile-controls .jump-btn.active { background: rgba(255,225,140,0.3); border-color: #ffe18c; }
   #mobile-controls.jumping-castle .jump-btn { display: flex; }
+  /* Tilt-to-look opt-out. Only touch devices have the sensor path at all,
+     and it sits above the entry overlay (z-index 10) so the preference can
+     be set before walking in as well as mid-walk. */
+  #motion-toggle { display: none; }
+  body.is-touch #motion-toggle {
+    display: inline-flex; align-items: center; gap: 6px; z-index: 12;
+    position: fixed; top: max(14px, env(safe-area-inset-top)); right: 48px;
+    padding: 7px 11px; border-radius: 999px; cursor: pointer;
+    background: rgba(8,21,27,0.8); border: 1px solid rgba(127,227,255,0.35);
+    color: #cdeff5; font: 11px/1 -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
+  }
+  #motion-toggle .motion-state { font-weight: 700; }
+  body.is-touch #motion-toggle.off { border-color: rgba(255,255,255,0.18); color: #92a8af; }
   /* On touch devices the movement pad occupies bottom-right, so the credits
      info toggle moves up top-right instead of overlapping it. */
   body.is-touch #credits-toggle { top: 14px; right: 14px; bottom: auto; }
@@ -151,6 +166,7 @@ if (!new URLSearchParams(location.search).has('scene') && !new URLSearchParams(l
 <button id="credits-toggle" title="Asset credits">ⓘ</button>
 <div id="credits-panel"></div>
 <nav id="scene-nav"></nav>
+<button id="motion-toggle" aria-pressed="true" aria-label="Look around by moving your device"><span aria-hidden="true">⟳</span> Tilt look <span class="motion-state">On</span></button>
 <div id="mobile-controls">
   <button id="btn-jump" class="move-btn jump-btn" aria-label="Jump">🦘</button>
   <button id="btn-forward" class="move-btn" aria-label="Move forward">▲</button>
@@ -1876,6 +1892,7 @@ const _q0 = new THREE.Quaternion()
 const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)) // -PI/2 around world X
 let orientationYawOffset = null // calibrated on first reading so "however you're holding the phone" = current facing
 function applyDeviceOrientation(evt) {
+  if (!motionLookEnabled) return // toggled off mid-session; drag-look takes over
   if (evt.alpha === null) return // some browsers fire a null-filled event once before real sensor data arrives
   const alpha = THREE.MathUtils.degToRad(evt.alpha)
   const beta = THREE.MathUtils.degToRad(evt.beta || 0)
@@ -1927,6 +1944,79 @@ function onTouchLookEnd(e) {
   if (performance.now() - tapTrack.startTime < 300 && dx * dx + dy * dy < 100) tryClickHotspot()
 }
 
+// ── Tilt-to-look on/off ─────────────────────────────────────────────────
+// Sensor-driven looking makes some people queasy (and on a tablet held flat
+// it's just awkward), so it's a persisted preference. Off simply means the
+// `deviceorientation` listener is never attached, which leaves the drag-look
+// path above as the only thing steering the camera.
+const MOTION_LOOK_KEY = 'museum-of-sam.tilt-look'
+let motionLookEnabled = true
+try { motionLookEnabled = localStorage.getItem(MOTION_LOOK_KEY) !== 'off' } catch {}
+let orientationAttached = false
+const motionToggleEl = document.getElementById('motion-toggle')
+
+function attachOrientation() {
+  if (orientationAttached) return
+  window.addEventListener('deviceorientation', applyDeviceOrientation)
+  orientationAttached = true
+}
+// iOS needs requestPermission() called from a user gesture — both callers
+// (the entry tap, and the toggle itself) are inside one.
+function enableMotionLook() {
+  const requestPermission = window.DeviceOrientationEvent?.requestPermission
+  if (typeof requestPermission === 'function') {
+    requestPermission().then((state) => { if (state === 'granted') attachOrientation() }).catch(() => {})
+  } else if (window.DeviceOrientationEvent) {
+    attachOrientation()
+  }
+}
+function disableMotionLook() {
+  if (orientationAttached) {
+    window.removeEventListener('deviceorientation', applyDeviceOrientation)
+    orientationAttached = false
+  }
+  if (useOrientationLook) {
+    // Hand the camera over to drag-look exactly where the tilt left it, but
+    // flattened: the quaternion path can leave roll on the camera, which
+    // drag-look (which writes Euler y/x only) would otherwise freeze in.
+    const dir = camera.getWorldDirection(new THREE.Vector3())
+    camera.rotation.set(
+      THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)), -PITCH_LIMIT, PITCH_LIMIT),
+      Math.atan2(-dir.x, -dir.z),
+      0,
+    )
+  }
+  useOrientationLook = false
+  orientationYawOffset = null // so re-enabling recalibrates to the current facing
+}
+
+function setMotionLook(on) {
+  motionLookEnabled = on
+  try { localStorage.setItem(MOTION_LOOK_KEY, on ? 'on' : 'off') } catch {}
+  motionToggleEl.setAttribute('aria-pressed', String(on))
+  motionToggleEl.classList.toggle('off', !on)
+  motionToggleEl.querySelector('.motion-state').textContent = on ? 'On' : 'Off'
+  const hint = document.querySelector('.touch-hint')
+  if (hint) {
+    hint.textContent = on
+      ? 'Tilt your device to look around · use the arrows bottom-right to walk'
+      : 'Swipe the screen to look around · use the arrows bottom-right to walk'
+  }
+  // Only touch the sensor once the walk has started; before that the
+  // preference is just recorded, so nobody gets a permission prompt on a
+  // screen they haven't entered yet.
+  if (!mobileActive) return
+  if (on) enableMotionLook()
+  else disableMotionLook()
+}
+
+motionToggleEl.addEventListener('click', (e) => {
+  e.preventDefault()
+  e.stopPropagation() // the entry overlay behind it also listens for clicks
+  setMotionLook(!motionLookEnabled)
+})
+setMotionLook(motionLookEnabled)
+
 function bindMoveButton(el, key) {
   const set = (v) => (e) => { e.preventDefault(); keys[key] = v; el.classList.toggle('active', v) }
   el.addEventListener('touchstart', set(true), { passive: false })
@@ -1941,13 +2031,7 @@ bindMoveButton(document.getElementById('btn-back'), 'back')
 
 function startMobileExperience() {
   document.documentElement.requestFullscreen?.().catch(() => {})
-  const attachOrientation = () => window.addEventListener('deviceorientation', applyDeviceOrientation)
-  const requestPermission = window.DeviceOrientationEvent?.requestPermission
-  if (typeof requestPermission === 'function') {
-    requestPermission().then((state) => { if (state === 'granted') attachOrientation() }).catch(() => {})
-  } else if (window.DeviceOrientationEvent) {
-    attachOrientation()
-  }
+  if (motionLookEnabled) enableMotionLook()
   renderer.domElement.addEventListener('touchstart', onTouchLookStart, { passive: true })
   renderer.domElement.addEventListener('touchmove', onTouchLookMove, { passive: true })
   renderer.domElement.addEventListener('touchend', onTouchLookEnd, { passive: true })
@@ -2151,6 +2235,7 @@ window.__debug = {
   isMobileActive: () => mobileActive,
   isOrientationLook: () => useOrientationLook,
   simulateOrientation: applyDeviceOrientation,
+  setMotionLook, isMotionLookEnabled: () => motionLookEnabled,
   hotspots, getEggsTotal: () => eggsTotal, getFoundEggs: () => [...foundEggs],
   triggerHotspot: (id) => { const h = hotspots.find((x) => x.id === id); if (h) { h.run(h); markFound(h.id, h.name) } },
   findAimedClickHotspot, updateHotspotHoverHint,
